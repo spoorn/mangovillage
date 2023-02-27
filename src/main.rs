@@ -6,12 +6,14 @@ use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::window::WindowDescriptor;
 use bevy::winit::{UpdateMode, WinitSettings};
+use bevy_embedded_assets::EmbeddedAssetPlugin;
 
 mod networking;
 mod client;
 mod server;
 mod player;
 mod camera;
+mod map;
 
 // For hiding the console window on client mode
 fn hide_console_window() {
@@ -73,20 +75,23 @@ fn main() {
         };
         App::new()
             .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
-            .add_plugins(default_plugins.set({
-                WindowPlugin {
-                    window: WindowDescriptor {
-                        title: "Mango Village".to_string(),
-                        width: 1000.0,
-                        height: 800.0,
-                        position: WindowPosition::Centered,
-                        monitor: MonitorSelection::Current,
+            .add_plugins(default_plugins
+                .add_before::<AssetPlugin, _>(EmbeddedAssetPlugin)
+                .set({
+                    WindowPlugin {
+                        window: WindowDescriptor {
+                            title: "Mango Village".to_string(),
+                            width: 1000.0,
+                            height: 800.0,
+                            position: WindowPosition::Centered,
+                            monitor: MonitorSelection::Current,
+                            ..default()
+                        },
                         ..default()
-                    },
-                    ..default()
-                }
+                    }
             }))
             .add_plugin(camera::CameraPlugin)
+            .add_plugin(player::client::PlayerClientPlugin)
             .run();
     }
 }

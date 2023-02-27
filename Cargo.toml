@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.9.1"
+bevy_embedded_assets = "0.6"
 durian = "0.3.0"
 # To close the console window on client
 # https://stackoverflow.com/questions/29763647/how-to-make-a-program-that-does-not-display-the-console-window
