@@ -5,6 +5,7 @@ use bevy::input::InputPlugin;
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::window::WindowDescriptor;
+use bevy::winit::{UpdateMode, WinitSettings};
 
 mod networking;
 mod client;
@@ -50,6 +51,12 @@ fn main() {
                         .add(DiagnosticsPlugin::default())
                         .add(LogPlugin::default())
                     )
+                    // So both client and server can be ran at once without blocking
+                    .insert_resource(WinitSettings {
+                        return_from_run: true,
+                        focused_mode: UpdateMode::Continuous,
+                        unfocused_mode: UpdateMode::Continuous
+                    })
                     .run();
             }
         });
