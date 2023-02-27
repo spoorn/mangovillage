@@ -6,3 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bevy = "0.9.1"
+durian = "0.3.0"
+# To close the console window on client
+# https://stackoverflow.com/questions/29763647/how-to-make-a-program-that-does-not-display-the-console-window
+winapi = { version = "0.3", features = ["wincon", "winuser"] }
