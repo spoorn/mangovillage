@@ -1,7 +1,10 @@
 use bevy::app::App;
 use bevy::prelude::{Commands, info, Plugin, Res};
-use durian::{ClientConfig, PacketManager};
+use durian::{ClientConfig, PacketManager, register_receive, register_send};
 use crate::client::resources::{ClientInfo, ClientPacketManager};
+use crate::common::util;
+use crate::networking::client_packets::Move;
+use crate::networking::server_packets::{SpawnPlayer, SpawnPlayerPacketBuilder, UpdatePositions, UpdatePositionsPacketBuilder};
 
 pub struct ClientPlugin {
     pub client_addr: String,
@@ -22,7 +25,12 @@ impl Plugin for ClientPlugin {
 fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     let mut manager = PacketManager::new();
     // register packets client-side
-    manager.init_client(ClientConfig::new(client_info.client_addr.clone(), client_info.server_addr.clone(), 0, 0)).unwrap();
+    let receives = util::validate_results(true, register_receive!(manager, (SpawnPlayer, SpawnPlayerPacketBuilder), (UpdatePositions, UpdatePositionsPacketBuilder)));
+    let sends = util::validate_results(true, register_send!(manager, Move));
+    // TODO: better error handling
+    if !receives { panic!("Failed to register all receive packets"); }
+    if !sends { panic!("Failed to register all send packets"); }
+    manager.init_client(ClientConfig::new(client_info.client_addr.clone(), client_info.server_addr.clone(), 2, 1)).unwrap();
     commands.insert_resource(ClientPacketManager { manager });
     info!("[client] Initialized client");
 }

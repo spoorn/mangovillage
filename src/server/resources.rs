@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 use bevy::prelude::Resource;
+use bevy::utils::HashMap;
 use durian::PacketManager;
 
 #[derive(Resource)]
@@ -25,4 +26,14 @@ impl DerefMut for ServerPacketManager {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.manager
     }
+}
+
+#[derive(Resource)]
+pub struct Players {
+    // ID to player
+    pub players: HashMap<u32, Player>
+}
+
+pub struct Player {
+    pub position: (u32, u32)
 }

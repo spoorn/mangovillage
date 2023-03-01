@@ -14,6 +14,7 @@ mod server;
 mod player;
 mod camera;
 mod map;
+mod common;
 
 // For hiding the console window on client mode
 fn hide_console_window() {
