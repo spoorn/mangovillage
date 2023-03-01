@@ -2,7 +2,7 @@ use std::{env, thread};
 use bevy::app::App;
 use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::input::InputPlugin;
-use bevy::log::LogPlugin;
+use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowDescriptor;
 use bevy::winit::{UpdateMode, WinitSettings};
@@ -38,9 +38,10 @@ fn main() {
     let client_addr = if args.len() >= 4 { args[3].to_owned() } else { "0.0.0.0:5001".to_string() };
     
     // https://github.com/bevyengine/bevy/issues/1969 - cannot add LogPlugin more than once
-
+    
     if client_or_server == "server" || client_or_server == "both" {
         println!("[server] Initializing server");
+        let server_addr = server_addr.clone();
         thread::spawn(move || {
             println!("[server] Server thread spawned");
             // Keep server alive
@@ -51,7 +52,10 @@ fn main() {
                         .add(TransformPlugin::default())
                         .add(HierarchyPlugin::default())
                         .add(DiagnosticsPlugin::default())
-                        .add(LogPlugin::default())
+                        .add( LogPlugin {
+                            filter: "info,durian=debug,wgpu=error".to_string(),
+                            level: Level::INFO
+                        })
                     )
                     // So both client and server can be ran at once without blocking
                     .insert_resource(WinitSettings {
@@ -59,6 +63,7 @@ fn main() {
                         focused_mode: UpdateMode::Continuous,
                         unfocused_mode: UpdateMode::Continuous
                     })
+                    .add_plugin(server::server::ServerPlugin { server_addr: server_addr.clone() })
                     .run();
             }
         });
@@ -71,7 +76,10 @@ fn main() {
         let default_plugins = if client_or_server == "both" {
             DefaultPlugins.build().disable::<LogPlugin>()
         } else {
-            DefaultPlugins.build()
+            DefaultPlugins.build().set(LogPlugin {
+                filter: "info,durian=debug,wgpu=error".to_string(),
+                level: Level::INFO
+            })
         };
         App::new()
             .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
@@ -91,6 +99,7 @@ fn main() {
                     }
             }))
             .add_plugin(camera::CameraPlugin)
+            .add_plugin(client::client::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone() })
             .add_plugin(player::client::PlayerClientPlugin)
             .run();
     }
