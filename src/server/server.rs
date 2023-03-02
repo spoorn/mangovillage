@@ -38,7 +38,7 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     if !receives { panic!("Failed to register all receive packets"); }
     if !sends { panic!("Failed to register all send packets"); }
     let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 1, 1);
-    server_config.with_keep_alive_interval(Duration::from_secs(30)).with_idle_timeout(Duration::from_secs(60));
+    server_config.with_keep_alive_interval(Duration::from_secs(30)).with_idle_timeout(None);
     manager.init_server(server_config).unwrap();
     commands.insert_resource(ServerPacketManager { manager });
     info!("[server] Initialized server")

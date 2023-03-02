@@ -81,7 +81,7 @@ fn main() {
             DefaultPlugins.build().disable::<LogPlugin>()
         } else {
             DefaultPlugins.build().set(LogPlugin {
-                filter: "info,durian=debug,wgpu=error".to_string(),
+                filter: "info,durian=info,wgpu=error".to_string(),
                 level: Level::INFO
             })
         };
