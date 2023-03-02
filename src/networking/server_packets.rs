@@ -2,18 +2,13 @@ use durian::bincode_packet;
 use serde::{Deserialize, Serialize};
 
 #[bincode_packet]
-pub struct SpawnPlayer {
-    // TODO: allow custom sprites
-    pub position: PlayerPosition
-}
-
-#[bincode_packet]
-pub struct UpdatePositions {
+#[derive(Debug)]
+pub struct UpdatePlayerPositions {
     pub positions: Vec<PlayerPosition>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PlayerPosition {
     pub id: u32,
-    pub position: (u32, u32)
+    pub position: (f32, f32)
 }

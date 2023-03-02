@@ -14,9 +14,10 @@ serde = { version = "1.0", features = ["derive"] }
 # https://stackoverflow.com/questions/29763647/how-to-make-a-program-that-does-not-display-the-console-window
 winapi = { version = "0.3", features = ["wincon", "winuser"] }
 
+# TODO: Enabling this slows down the program, making it become unresponsive within a few seconds.  Why?
 # Enable a small amount of optimization in debug mode
-[profile.dev]
-opt-level = 1
+#[profile.dev]
+#opt-level = 1
 
 # Enable high optimizations for dependencies (incl. Bevy), but not for our code:
 [profile.dev.package."*"]

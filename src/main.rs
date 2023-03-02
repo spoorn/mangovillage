@@ -35,8 +35,9 @@ fn main() {
     // Allow spinning up as either client or server through same program.  We can split it up later.
     let args: Vec<String> = env::args().collect();
     let client_or_server = if args.len() >= 2 { &args[1] } else { "client" };
-    let server_addr = if args.len() >= 3 { args[2].to_owned() } else { "192.168.1.243:28154".to_string() };
-    let client_addr = if args.len() >= 4 { args[3].to_owned() } else { "0.0.0.0:5001".to_string() };
+    let client_addr = if args.len() >= 3 { args[2].to_owned() } else { "0.0.0.0:5001".to_string() };
+    let server_addr = if args.len() >= 4 { args[3].to_owned() } else { "192.168.1.243:28154".to_string() };
+    // cargo run --release -- client 0.0.0.0:5002
     
     // https://github.com/bevyengine/bevy/issues/1969 - cannot add LogPlugin more than once
     
@@ -54,7 +55,7 @@ fn main() {
                         .add(HierarchyPlugin::default())
                         .add(DiagnosticsPlugin::default())
                         .add( LogPlugin {
-                            filter: "info,durian=debug,wgpu=error".to_string(),
+                            filter: "info,durian=info,wgpu=error".to_string(),
                             level: Level::INFO
                         })
                     )
@@ -65,6 +66,8 @@ fn main() {
                         unfocused_mode: UpdateMode::Continuous
                     })
                     .add_plugin(server::server::ServerPlugin { server_addr: server_addr.clone() })
+                    .add_plugin(player::server::PlayerServerPlugin)
+                    .add_plugin(player::PlayerCommonPlugin)
                     .run();
             }
         });
@@ -102,6 +105,7 @@ fn main() {
             .add_plugin(camera::CameraPlugin)
             .add_plugin(client::client::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone() })
             .add_plugin(player::client::PlayerClientPlugin)
+            .add_plugin(player::PlayerCommonPlugin)
             .run();
     }
 }
