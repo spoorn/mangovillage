@@ -3,6 +3,11 @@ use bevy::prelude::Resource;
 use durian::PacketManager;
 
 #[derive(Resource)]
+pub struct ClientId {
+    pub id: u32
+}
+
+#[derive(Resource)]
 pub struct ClientInfo {
     pub client_addr: String,
     pub server_addr: String

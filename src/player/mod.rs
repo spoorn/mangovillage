@@ -1,10 +1,11 @@
 use bevy::app::App;
 use bevy::prelude::{AssetServer, Commands, default, info, Plugin, Query, Res, Sprite, SpriteBundle, Transform, Vec2, Vec3, With};
 use bevy::render::texture::DEFAULT_IMAGE_HANDLE;
+use bevy_ecs_ldtk::LdtkWorldBundle;
 
 use crate::common::components::Position;
 use crate::common::Direction;
-use crate::player::components::Player;
+use crate::player::components::{Me, Player};
 
 pub mod client;
 pub mod server;
@@ -19,19 +20,37 @@ impl Plugin for PlayerCommonPlugin {
     }
 }
 
-pub fn spawn_player(commands: &mut Commands, asset_server: Option<&Res<AssetServer>>, id: u32, position: (f32, f32)) {
+pub fn spawn_player(commands: &mut Commands, asset_server: Option<&Res<AssetServer>>, id: u32, position: (f32, f32), is_self: bool) {
     info!("Spawning new player at ({}, {})", position.0, position.1);
-    commands
+    let mut player_spawn = commands
         .spawn(SpriteBundle {
             sprite: Sprite {
-                custom_size: Some(Vec2::splat(32.0)),
+                custom_size: Some(Vec2::splat(12.0)),
                 ..default()
             },
+            transform: Transform::from_xyz(0.0, 0.0, 10.0),
             texture: if let Some(asset_server) = asset_server { asset_server.load("icon/test.png") } else { DEFAULT_IMAGE_HANDLE.typed() },
             ..default()
-        })
+        });
+    player_spawn
         .insert(Player { id })
         .insert(Position { x: position.0, y: position.1 });
+    
+    if is_self {
+        player_spawn.insert(Me);
+    }
+    
+    if let Some(asset_server) = asset_server {
+        commands.spawn(LdtkWorldBundle {
+            ldtk_handle: asset_server.load("ldtk/test.ldtk"),
+            // transform: Transform {
+            //     //translation: Vec3::new(-500.0, -500.0, 1.0),
+            //     scale: Vec3::new(2.0, 2.0, 1.0),
+            //     ..default()
+            // },
+            ..default()
+        });
+    }
 }
 
 pub fn transform_positions(mut query: Query<(&Position, &mut Transform), With<Player>>) {

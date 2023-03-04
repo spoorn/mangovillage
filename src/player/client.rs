@@ -2,7 +2,7 @@ use bevy::app::App;
 use bevy::prelude::{AssetServer, Commands, error, Input, KeyCode, Plugin, Query, Res, ResMut};
 use bevy::utils::HashMap;
 
-use crate::client::resources::ClientPacketManager;
+use crate::client::resources::{ClientId, ClientPacketManager};
 use crate::common::components::Position;
 use crate::common::Direction;
 use crate::networking::client_packets::Move;
@@ -40,7 +40,7 @@ fn movement_input(keys: Res<Input<KeyCode>>, mut manager: ResMut<ClientPacketMan
     }
 }
 
-fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mut Position)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>) {
+fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mut Position)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
     //info!("manager {:?}", manager.manager);
     let update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
     if let Some(update_players) = update_players {
@@ -58,7 +58,7 @@ fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mu
                     p.y = player.position.1;
                 } else {
                     // New player
-                    spawn_player(&mut commands, Some(&asset_server), player.id, player.position);
+                    spawn_player(&mut commands, Some(&asset_server), player.id, player.position, player.id == client_id.id);
                 }
             }
         }

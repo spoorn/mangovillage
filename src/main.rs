@@ -1,4 +1,5 @@
 use std::{env, thread};
+
 use bevy::app::App;
 use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::input::InputPlugin;
@@ -6,6 +7,7 @@ use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowDescriptor;
 use bevy::winit::{UpdateMode, WinitSettings};
+use bevy_ecs_ldtk::{LdtkPlugin, LdtkSettings, LevelSelection, LevelSpawnBehavior, SetClearColor};
 use bevy_embedded_assets::EmbeddedAssetPlugin;
 
 mod networking;
@@ -86,15 +88,15 @@ fn main() {
             })
         };
         App::new()
-            .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
-            .add_plugins(default_plugins
+            //.insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
+            .add_plugins(default_plugins.set(ImagePlugin::default_nearest())
                 .add_before::<AssetPlugin, _>(EmbeddedAssetPlugin)
                 .set({
                     WindowPlugin {
                         window: WindowDescriptor {
                             title: "Mango Village".to_string(),
-                            width: 1000.0,
-                            height: 800.0,
+                            width: 1280.0,
+                            height: 720.0,
                             position: WindowPosition::Centered,
                             monitor: MonitorSelection::Current,
                             ..default()
@@ -106,6 +108,15 @@ fn main() {
             .add_plugin(client::client::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone() })
             .add_plugin(player::client::PlayerClientPlugin)
             .add_plugin(player::PlayerCommonPlugin)
+            .add_plugin(LdtkPlugin)
+            .insert_resource(LevelSelection::Index(0))
+            .insert_resource(LdtkSettings {
+                level_spawn_behavior: LevelSpawnBehavior::UseWorldTranslation {
+                    load_level_neighbors: true,
+                },
+                set_clear_color: SetClearColor::FromLevelBackground,
+                ..Default::default()
+            })
             .run();
     }
 }

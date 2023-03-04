@@ -1,14 +1,14 @@
 use std::time::Duration;
 
 use bevy::app::App;
-use bevy::prelude::{Commands, info, Plugin, Query, Res};
+use bevy::prelude::{Commands, info, Plugin, Query, Res, ResMut};
 use bevy::utils::HashMap;
 use durian::{PacketManager, register_receive, register_send, ServerConfig};
 
 use crate::common::components::Position;
 use crate::common::util;
 use crate::networking::client_packets::{Move, MovePacketBuilder};
-use crate::networking::server_packets::UpdatePlayerPositions;
+use crate::networking::server_packets::{SpawnAck, UpdatePlayerPositions};
 use crate::player::components::Player;
 use crate::player::spawn_player;
 use crate::server::resources::{ServerInfo, ServerPacketManager};
@@ -33,11 +33,11 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     let mut manager = PacketManager::new();
     // register server side packets
     let receives = util::validate_results(false, register_receive!(manager, (Move, MovePacketBuilder)));
-    let sends = util::validate_results(false, register_send!(manager, UpdatePlayerPositions));
+    let sends = util::validate_results(false, register_send!(manager, UpdatePlayerPositions, SpawnAck));
     // TODO: better error handling
     if !receives { panic!("Failed to register all receive packets"); }
     if !sends { panic!("Failed to register all send packets"); }
-    let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 1, 1);
+    let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 1, 2);
     server_config.with_keep_alive_interval(Duration::from_secs(30)).with_idle_timeout(None);
     manager.init_server(server_config).unwrap();
     commands.insert_resource(ServerPacketManager { manager });
@@ -45,7 +45,7 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
 }
 
 /// Adds new players to player pool
-fn accept_new_player(mut commands: Commands, mut players_query: Query<(&Player, &mut Position)>, manager: Res<ServerPacketManager>) {
+fn accept_new_player(mut commands: Commands, mut players_query: Query<(&Player, &mut Position)>, mut manager: ResMut<ServerPacketManager>) {
     let clients = manager.get_client_connections();
     
     // TODO: there has to be a faster way to do this than creating a map every iteration?  Can use a set too
@@ -66,6 +66,7 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&Player, 
     
     for (addr, id) in new_players.into_iter() {
         info!("[server] Found new player with addr={}, id={}", addr, id);
-        spawn_player(&mut commands, None, *id, (0.0, 0.0));
+        spawn_player(&mut commands, None, *id, (148.0, 88.0), false);
+        manager.send_to(addr, SpawnAck { id: *id }).unwrap();
     }
 }
