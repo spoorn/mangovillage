@@ -5,3 +5,6 @@ use crate::common::Direction;
 pub struct Move {
     pub dir: Direction
 }
+
+#[bincode_packet]
+pub struct Disconnect;
