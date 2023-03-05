@@ -12,6 +12,7 @@ use crate::networking::server_packets::{SpawnAck, UpdatePlayerPositions};
 use crate::player::components::Player;
 use crate::player::spawn_player;
 use crate::server::resources::{ServerInfo, ServerPacketManager};
+use crate::world::LEVEL_IIDS;
 
 pub struct ServerPlugin {
     pub server_addr: String
@@ -67,6 +68,6 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&Player, 
     for (addr, id) in new_players.into_iter() {
         info!("[server] Found new player with addr={}, id={}", addr, id);
         spawn_player(&mut commands, None, *id, (148.0, 88.0), false);
-        manager.send_to(addr, SpawnAck { id: *id }).unwrap();
+        manager.send_to(addr, SpawnAck { id: *id, level_iid: LEVEL_IIDS[1].to_string() }).unwrap();
     }
 }

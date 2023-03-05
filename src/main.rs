@@ -68,7 +68,7 @@ fn main() {
                         // .add(HierarchyPlugin::default())
                         // .add(DiagnosticsPlugin::default())
                         .set( LogPlugin {
-                            filter: "info,durian=debug,wgpu=error".to_string(),
+                            filter: "info,durian=info,wgpu=error".to_string(),
                             level: Level::INFO
                         })
                     )

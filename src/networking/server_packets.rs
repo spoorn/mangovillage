@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 #[bincode_packet]
 pub struct SpawnAck {
     // clientId of the player, so the client can keep track of which player is themselves
-    pub id: u32
+    pub id: u32,
+    // Which ldtk level to load when spawning in
+    pub level_iid: String
 }
 
 #[bincode_packet]

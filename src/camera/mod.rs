@@ -1,9 +1,10 @@
 use bevy::app::App;
-use bevy::prelude::{Assets, Camera2dBundle, Commands, Handle, Plugin, Query, Res, Transform, With, Without};
+use bevy::prelude::{Assets, Camera2dBundle, Commands, Handle, Plugin, Query, Res, SystemSet, Transform, With, Without};
 use bevy_ecs_ldtk::{LdtkLevel, LevelSelection};
 use bevy_render::prelude::{Camera, OrthographicProjection};
 
 use crate::player::components::{Me, Player};
+use crate::state::ClientState;
 
 pub struct CameraPlugin;
 
@@ -11,7 +12,7 @@ impl Plugin for CameraPlugin {
     
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup_camera)
-            .add_system(follow_player);
+            .add_system_set(SystemSet::on_update(ClientState::Running).with_system(follow_player));
     }
 }
 

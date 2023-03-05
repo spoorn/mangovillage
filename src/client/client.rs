@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use bevy::app::App;
 use bevy::prelude::{Commands, info, Plugin, Res, ResMut, State, SystemSet};
+use bevy_ecs_ldtk::LevelSelection;
 use durian::{ClientConfig, PacketManager, register_receive, register_send};
 
 use crate::client::resources::{ClientId, ClientInfo, ClientPacketManager};
@@ -61,7 +62,7 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
 }
 
 // TODO: Use states instead when bevy 0.10 with stateless RFC comes out
-fn get_client_id(mut manager: ResMut<ClientPacketManager>, mut client_id: ResMut<ClientId>, mut client_state: ResMut<State<ClientState>>) {
+fn get_client_id(mut commands: Commands, mut manager: ResMut<ClientPacketManager>, mut client_id: ResMut<ClientId>, mut client_state: ResMut<State<ClientState>>) {
     if !client_id.set {
         if let Some(ack) = manager.received::<SpawnAck, SpawnAckPacketBuilder>(true).unwrap() {
             let id = ack[0].id;
@@ -71,6 +72,10 @@ fn get_client_id(mut manager: ResMut<ClientPacketManager>, mut client_id: ResMut
             client_id.id = id;
             client_id.set = true;
             client_state.set(ClientState::Running).unwrap();
+            
+            let level_iid = ack[0].level_iid.clone();
+            info!("[client] Loading level iid={}", level_iid);
+            commands.insert_resource(LevelSelection::Iid(level_iid))
         }
     }
 }

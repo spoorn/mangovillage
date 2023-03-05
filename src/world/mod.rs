@@ -1,12 +1,7 @@
-use bevy::prelude::{AssetServer, Commands, default, Res};
-use bevy_ecs_ldtk::LdtkWorldBundle;
-
 pub mod client;
 pub mod server;
 
-fn load_level(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(LdtkWorldBundle {
-        ldtk_handle: asset_server.load("ldtk/test.ldtk"),
-        ..default()
-    });
-}
+pub const LEVEL_IIDS: [&str; 2] = [
+    "a2a50ff0-66b0-11ec-9cd7-c721746049b9",
+    "db9e9610-9f30-11ed-9161-49318aa2f89c",
+];
