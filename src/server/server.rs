@@ -2,9 +2,10 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 use bevy::app::App;
-use bevy::prelude::{Commands, Entity, info, Plugin, Query, Res, ResMut};
+use bevy::prelude::{Commands, Entity, error, info, Plugin, Query, Res, ResMut};
 use bevy::utils::HashMap;
 use durian::{PacketManager, register_receive, register_send, ServerConfig};
+use rand::Rng;
 
 use crate::common::components::Position;
 use crate::common::util;
@@ -40,7 +41,7 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     if !receives { panic!("Failed to register all receive packets"); }
     if !sends { panic!("Failed to register all send packets"); }
     let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 1, 2);
-    server_config.with_keep_alive_interval(Duration::from_secs(30)).with_idle_timeout(None);
+    server_config.with_keep_alive_interval(Duration::from_secs(30)).with_idle_timeout(Some(Duration::from_secs(60)));
     manager.init_server(server_config).unwrap();
     commands.insert_resource(ServerPacketManager { manager });
     info!("[server] Initialized server")
@@ -74,7 +75,9 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&Player, 
     for (addr, id) in new_players.into_iter() {
         info!("[server] Found new player with addr={}, id={}", addr, id);
         spawn_player(&mut commands, None, *id, (148.0, 88.0), false);
-        manager.send_to(addr, SpawnAck { id: *id, level_iid: LEVEL_IIDS[1].to_string() }).unwrap();
+        if let Err(e) = manager.send_to(addr, SpawnAck { id: *id, level_iid: LEVEL_IIDS[rand::thread_rng().gen_range(0..LEVEL_IIDS.len())].to_string() }) {
+            error!("[server] Failed to send SpawnAck to addr={}.  Error: {}", addr, e);
+        }
     }
     
     for (id, entity) in removed_players.into_iter() {
