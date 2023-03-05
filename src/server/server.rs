@@ -1,7 +1,8 @@
+use std::collections::HashSet;
 use std::time::Duration;
 
 use bevy::app::App;
-use bevy::prelude::{Commands, info, Plugin, Query, Res, ResMut};
+use bevy::prelude::{Commands, Entity, info, Plugin, Query, Res, ResMut};
 use bevy::utils::HashMap;
 use durian::{PacketManager, register_receive, register_send, ServerConfig};
 
@@ -46,13 +47,18 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
 }
 
 /// Adds new players to player pool
-fn accept_new_player(mut commands: Commands, mut players_query: Query<(&Player, &mut Position)>, mut manager: ResMut<ServerPacketManager>) {
+fn accept_new_player(mut commands: Commands, mut players_query: Query<(&Player, &mut Position, Entity)>, mut manager: ResMut<ServerPacketManager>) {
     let clients = manager.get_client_connections();
+    let client_ids: HashSet<&u32> = clients.iter().map(|(_addr, id)| id).collect();
     
+    let mut removed_players = Vec::new();
     // TODO: there has to be a faster way to do this than creating a map every iteration?  Can use a set too
     let mut players = HashMap::new();
-    for (player, position) in players_query.iter_mut() {
+    for (player, position, entity) in players_query.iter_mut() {
         players.insert(player.id, position);
+        if !client_ids.contains(&player.id) {
+            removed_players.push((player.id, entity));
+        }
     }
         
     // TODO: handle removed players
@@ -69,5 +75,10 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&Player, 
         info!("[server] Found new player with addr={}, id={}", addr, id);
         spawn_player(&mut commands, None, *id, (148.0, 88.0), false);
         manager.send_to(addr, SpawnAck { id: *id, level_iid: LEVEL_IIDS[1].to_string() }).unwrap();
+    }
+    
+    for (id, entity) in removed_players.into_iter() {
+        info!("[server] Despawning player with id={}", id);
+        commands.entity(entity).despawn();
     }
 }

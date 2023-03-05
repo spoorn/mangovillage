@@ -1,5 +1,6 @@
+use std::collections::HashSet;
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, error, Input, KeyCode, Plugin, Query, Res, ResMut, SystemSet};
+use bevy::prelude::{AssetServer, Commands, Entity, error, info, Input, KeyCode, Plugin, Query, Res, ResMut, SystemSet};
 use bevy::utils::HashMap;
 
 use crate::client::resources::{ClientId, ClientPacketManager};
@@ -44,25 +45,37 @@ fn movement_input(keys: Res<Input<KeyCode>>, mut manager: ResMut<ClientPacketMan
     }
 }
 
-fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mut Position)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
+fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mut Position, Entity)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
     let update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
     if let Some(update_players) = update_players {
         // We only care about the last update
         if let Some(last) = update_players.last() {
-            // TODO: there has to be a faster way to do this than creating a map every iteration?  Can use a set too
+            // TODO: there has to be a faster way to do this than creating a map every iteration?
             let mut players = HashMap::new();
-            for (player, position) in players_query.iter_mut() {
-                players.insert(player.id, position);
+            let mut player_ids = HashSet::new();
+            for (player, position, entity) in players_query.iter_mut() {
+                players.insert(player.id, (position, entity));
+                player_ids.insert(player.id);
             }
             
+            // TODO: Would it be faster to handle a Despawn packet instead of looping through here?
+            let mut server_players = HashSet::new();
             for player in last.positions.iter() {
-                if let Some(p) = players.get_mut(&player.id) {
+                server_players.insert(player.id);
+                if let Some((p, _entity)) = players.get_mut(&player.id) {
                     p.x = player.position.0;
                     p.y = player.position.1;
                 } else {
                     // New player
                     spawn_player(&mut commands, Some(&asset_server), player.id, player.position, player.id == client_id.id);
                 }
+            }
+            
+            // Remove despawned players
+            for removed_player in player_ids.difference(&server_players) {
+                let (pos, entity) = players.get(removed_player).unwrap();
+                info!("[client] Despawning player with id={} at position=({}, {})", removed_player, pos.x, pos.y);
+                commands.entity(*entity).despawn();
             }
         }
     }
