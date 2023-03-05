@@ -1,8 +1,7 @@
-use std::thread;
 use std::time::Duration;
 
 use bevy::app::App;
-use bevy::prelude::{Commands, info, Plugin, Res};
+use bevy::prelude::{Commands, info, Plugin, Res, ResMut};
 use durian::{ClientConfig, PacketManager, register_receive, register_send};
 
 use crate::client::resources::{ClientId, ClientInfo, ClientPacketManager};
@@ -22,7 +21,7 @@ impl Plugin for ClientPlugin {
             client_addr: self.client_addr.clone(),
             server_addr: self.server_addr.clone()
         })
-            .add_startup_system(init_client);
+            .add_startup_system(init_client).add_system(get_client_id);
     }
 }
 
@@ -40,18 +39,34 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     manager.init_client(client_config).unwrap();
     
     // wait for ACK, and to get server's assigned client ID
-    // TODO: There is a chance this hangs the app so the server never sends the ACK due to the sleep
-    loop {
-        if let Some(ack) = manager.received::<SpawnAck, SpawnAckPacketBuilder>(false).unwrap() {
-            let id = ack[0].id;
-            info!("[client] Client ID is {}", id);
-            commands.insert_resource(ClientId { id });
-            break;
-        }
-        info!("[client] Waiting for ACK from server");
-        thread::sleep(Duration::from_secs(1));
-    }
+    // TODO: There is a chance this hangs the server app so it never sends the ACK due to the sleep when running both
+    // client and server at once.  Not sure why.
+    commands.insert_resource(ClientId { id: 0, set: false });
+    //loop {
+    // if let Some(ack) = manager.received::<SpawnAck, SpawnAckPacketBuilder>(true).unwrap() {
+    //     let id = ack[0].id;
+    //     info!("[client] Client ID is {}", id);
+    //     commands.insert_resource(ClientId { id });
+    //     //break;
+    // }
+    //     info!("[client] Waiting for ACK from server");
+    //     thread::sleep(Duration::from_secs(1));
+    // }
 
     info!("[client] Initialized client");
     commands.insert_resource(ClientPacketManager { manager });
+}
+
+// TODO: Use states instead when bevy 0.10 with stateless RFC comes out
+fn get_client_id(mut manager: ResMut<ClientPacketManager>, mut client_id: ResMut<ClientId>) {
+    if !client_id.set {
+        if let Some(ack) = manager.received::<SpawnAck, SpawnAckPacketBuilder>(true).unwrap() {
+            let id = ack[0].id;
+            info!("[client] Client ID is {}", id);
+            //commands.insert_resource(ClientId { id });
+            //break;
+            client_id.id = id;
+            client_id.set = true;
+        }
+    }
 }

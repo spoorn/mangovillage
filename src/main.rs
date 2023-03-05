@@ -2,7 +2,6 @@ use std::{env, thread};
 
 use bevy::app::App;
 use bevy::diagnostic::DiagnosticsPlugin;
-use bevy::input::InputPlugin;
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowDescriptor;
@@ -46,13 +45,12 @@ fn main() {
     if client_or_server == "server" || client_or_server == "both" {
         println!("[server] Initializing server");
         let server_addr = server_addr.clone();
-        thread::spawn(move || {
+        let server_run = move || {
             println!("[server] Server thread spawned");
             // Keep server alive
             loop {
                 App::new()
                     .add_plugins(MinimalPlugins.build()
-                        .add(InputPlugin::default())
                         .add(TransformPlugin::default())
                         .add(HierarchyPlugin::default())
                         .add(DiagnosticsPlugin::default())
@@ -72,7 +70,12 @@ fn main() {
                     .add_plugin(player::PlayerCommonPlugin)
                     .run();
             }
-        });
+        };
+        if client_or_server == "server" {
+            server_run();
+        } else {
+            thread::spawn(server_run);
+        }
     }
     
     // "both" to spin up the server on a separate background thread, and client on main thread

@@ -4,7 +4,9 @@ use durian::PacketManager;
 
 #[derive(Resource)]
 pub struct ClientId {
-    pub id: u32
+    pub id: u32,
+    // TODO: temporary, until logic in client.rs is fixed.  True if was set, False if still waiting to be set
+    pub set: bool
 }
 
 #[derive(Resource)]
