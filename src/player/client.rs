@@ -1,5 +1,5 @@
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, error, Input, KeyCode, Plugin, Query, Res, ResMut};
+use bevy::prelude::{AssetServer, Commands, error, Input, KeyCode, Plugin, Query, Res, ResMut, SystemSet};
 use bevy::utils::HashMap;
 
 use crate::client::resources::{ClientId, ClientPacketManager};
@@ -9,13 +9,17 @@ use crate::networking::client_packets::Move;
 use crate::networking::server_packets::{UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder};
 use crate::player::components::Player;
 use crate::player::spawn_player;
+use crate::state::ClientState;
 
 pub struct PlayerClientPlugin;
 impl Plugin for PlayerClientPlugin {
     
     fn build(&self, app: &mut App) {
-        app.add_system(movement_input)
-            .add_system(update_players);
+        app.add_system_set(
+            SystemSet::on_update(ClientState::Running)
+                .with_system(movement_input)
+                .with_system(update_players)
+        );
     }
 }
 
@@ -41,7 +45,6 @@ fn movement_input(keys: Res<Input<KeyCode>>, mut manager: ResMut<ClientPacketMan
 }
 
 fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mut Position)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
-    //info!("manager {:?}", manager.manager);
     let update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
     if let Some(update_players) = update_players {
         // We only care about the last update

@@ -39,18 +39,6 @@ pub fn spawn_player(commands: &mut Commands, asset_server: Option<&Res<AssetServ
     if is_self {
         player_spawn.insert(Me);
     }
-    
-    if let Some(asset_server) = asset_server {
-        commands.spawn(LdtkWorldBundle {
-            ldtk_handle: asset_server.load("ldtk/test.ldtk"),
-            // transform: Transform {
-            //     //translation: Vec3::new(-500.0, -500.0, 1.0),
-            //     scale: Vec3::new(2.0, 2.0, 1.0),
-            //     ..default()
-            // },
-            ..default()
-        });
-    }
 }
 
 pub fn transform_positions(mut query: Query<(&Position, &mut Transform), With<Player>>) {

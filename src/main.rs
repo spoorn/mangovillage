@@ -1,13 +1,16 @@
 use std::{env, thread};
 
 use bevy::app::App;
+use bevy::core_pipeline::core_2d::Core2dPlugin;
+use bevy::core_pipeline::CorePipelinePlugin;
 use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
-use bevy::window::WindowDescriptor;
-use bevy::winit::{UpdateMode, WinitSettings};
-use bevy_ecs_ldtk::{LdtkPlugin, LdtkSettings, LevelSelection, LevelSpawnBehavior, SetClearColor};
+use bevy::sprite::SpritePlugin;
+use bevy::window::{ModifiesWindows, WindowDescriptor};
+use bevy::winit::{UpdateMode, winit_runner, WinitPlugin, WinitSettings, WinitWindows};
 use bevy_embedded_assets::EmbeddedAssetPlugin;
+use bevy_render::RenderPlugin;
 
 mod networking;
 mod client;
@@ -16,6 +19,8 @@ mod player;
 mod camera;
 mod map;
 mod common;
+mod world;
+mod state;
 
 // For hiding the console window on client mode
 fn hide_console_window() {
@@ -50,12 +55,20 @@ fn main() {
             // Keep server alive
             loop {
                 App::new()
-                    .add_plugins(MinimalPlugins.build()
-                        .add(TransformPlugin::default())
-                        .add(HierarchyPlugin::default())
-                        .add(DiagnosticsPlugin::default())
-                        .add( LogPlugin {
-                            filter: "info,durian=info,wgpu=error".to_string(),
+                    // Use MinimalPlugins when bevy_ecs_ldtk can disable rendering features
+                    .add_plugins(DefaultPlugins.build()
+                        // .add(WindowPlugin::default())
+                        // .add(WinitPlugin::default())
+                        // .add(AssetPlugin::default())
+                        // .add(RenderPlugin::default())
+                        // .add(ImagePlugin::default())
+                        // .add(CorePipelinePlugin::default())
+                        // .add(SpritePlugin::default())
+                        // .add(TransformPlugin::default())
+                        // .add(HierarchyPlugin::default())
+                        // .add(DiagnosticsPlugin::default())
+                        .set( LogPlugin {
+                            filter: "info,durian=debug,wgpu=error".to_string(),
                             level: Level::INFO
                         })
                     )
@@ -68,6 +81,7 @@ fn main() {
                     .add_plugin(server::server::ServerPlugin { server_addr: server_addr.clone() })
                     .add_plugin(player::server::PlayerServerPlugin)
                     .add_plugin(player::PlayerCommonPlugin)
+                    .add_plugin(world::server::LdtkServerPlugin)
                     .run();
             }
         };
@@ -111,15 +125,7 @@ fn main() {
             .add_plugin(client::client::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone() })
             .add_plugin(player::client::PlayerClientPlugin)
             .add_plugin(player::PlayerCommonPlugin)
-            .add_plugin(LdtkPlugin)
-            .insert_resource(LevelSelection::Index(0))
-            .insert_resource(LdtkSettings {
-                level_spawn_behavior: LevelSpawnBehavior::UseWorldTranslation {
-                    load_level_neighbors: true,
-                },
-                set_clear_color: SetClearColor::FromLevelBackground,
-                ..Default::default()
-            })
+            .add_plugin(world::client::LdtkClientPlugin)
             .run();
     }
 }

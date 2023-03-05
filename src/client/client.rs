@@ -1,13 +1,14 @@
 use std::time::Duration;
 
 use bevy::app::App;
-use bevy::prelude::{Commands, info, Plugin, Res, ResMut};
+use bevy::prelude::{Commands, info, Plugin, Res, ResMut, State, SystemSet};
 use durian::{ClientConfig, PacketManager, register_receive, register_send};
 
 use crate::client::resources::{ClientId, ClientInfo, ClientPacketManager};
 use crate::common::util;
 use crate::networking::client_packets::Move;
 use crate::networking::server_packets::{SpawnAck, SpawnAckPacketBuilder, UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder};
+use crate::state::ClientState;
 
 pub struct ClientPlugin {
     pub client_addr: String,
@@ -21,7 +22,9 @@ impl Plugin for ClientPlugin {
             client_addr: self.client_addr.clone(),
             server_addr: self.server_addr.clone()
         })
-            .add_startup_system(init_client).add_system(get_client_id);
+            .add_state(ClientState::JoiningServer)
+            .add_startup_system(init_client)
+            .add_system_set(SystemSet::on_update(ClientState::JoiningServer).with_system(get_client_id));
     }
 }
 
@@ -58,7 +61,7 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
 }
 
 // TODO: Use states instead when bevy 0.10 with stateless RFC comes out
-fn get_client_id(mut manager: ResMut<ClientPacketManager>, mut client_id: ResMut<ClientId>) {
+fn get_client_id(mut manager: ResMut<ClientPacketManager>, mut client_id: ResMut<ClientId>, mut client_state: ResMut<State<ClientState>>) {
     if !client_id.set {
         if let Some(ack) = manager.received::<SpawnAck, SpawnAckPacketBuilder>(true).unwrap() {
             let id = ack[0].id;
@@ -67,6 +70,7 @@ fn get_client_id(mut manager: ResMut<ClientPacketManager>, mut client_id: ResMut
             //break;
             client_id.id = id;
             client_id.set = true;
+            client_state.set(ClientState::Running).unwrap();
         }
     }
 }
