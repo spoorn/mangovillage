@@ -16,7 +16,7 @@ pub struct UpdatePlayerPositions {
     pub positions: Vec<PlayerPosition>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct PlayerPosition {
     pub id: u32,
     pub position: (f32, f32)

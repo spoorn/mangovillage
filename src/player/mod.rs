@@ -1,11 +1,9 @@
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, default, info, Plugin, Query, Res, Sprite, SpriteBundle, Transform, Vec2, Vec3, With};
-use bevy::render::texture::DEFAULT_IMAGE_HANDLE;
-use bevy_ecs_ldtk::LdtkWorldBundle;
+use bevy::prelude::{Plugin, Query, Res, Time, Transform, Vec3, With};
 
 use crate::common::components::Position;
 use crate::common::Direction;
-use crate::player::components::{Me, Player};
+use crate::player::components::ClientPlayer;
 
 pub mod client;
 pub mod server;
@@ -20,28 +18,7 @@ impl Plugin for PlayerCommonPlugin {
     }
 }
 
-pub fn spawn_player(commands: &mut Commands, asset_server: Option<&Res<AssetServer>>, id: u32, position: (f32, f32), is_self: bool) {
-    info!("Spawning new player at ({}, {})", position.0, position.1);
-    let mut player_spawn = commands
-        .spawn(SpriteBundle {
-            sprite: Sprite {
-                custom_size: Some(Vec2::splat(12.0)),
-                ..default()
-            },
-            transform: Transform::from_xyz(0.0, 0.0, 10.0),
-            texture: if let Some(asset_server) = asset_server { asset_server.load("icon/test.png") } else { DEFAULT_IMAGE_HANDLE.typed() },
-            ..default()
-        });
-    player_spawn
-        .insert(Player { id })
-        .insert(Position { x: position.0, y: position.1 });
-    
-    if is_self {
-        player_spawn.insert(Me);
-    }
-}
-
-pub fn transform_positions(mut query: Query<(&Position, &mut Transform), With<Player>>) {
+pub fn transform_positions(mut query: Query<(&Position, &mut Transform), With<ClientPlayer>>) {
     for (pos, mut trans) in query.iter_mut() {
         if pos.x != trans.translation.x || pos.y != trans.translation.y {  // Avoid new instantiations if possible
             trans.translation = Vec3::new(pos.x, pos.y, trans.translation.z);
@@ -49,12 +26,16 @@ pub fn transform_positions(mut query: Query<(&Position, &mut Transform), With<Pl
     }
 }
 
+// Per second
+const PLAYER_MOVE_SPEED: f32 = 100.0;
+
 // Handle an entity's movement
-fn handle_move(direction: Direction, position: &mut Position) {
+fn handle_move(time: &Res<Time>, direction: Direction, position: &mut Position) {
+    let movement = PLAYER_MOVE_SPEED * time.delta_seconds();
     match direction {
-        Direction::Left => { position.x -= 1.0; }
-        Direction::Up => { position.y += 1.0; }
-        Direction::Right => { position.x += 1.0; }
-        Direction::Down => { position.y -= 1.0; }
+        Direction::Left => { position.x -= movement; }
+        Direction::Up => { position.y += movement; }
+        Direction::Right => { position.x += movement; }
+        Direction::Down => { position.y -= movement; }
     }
 }

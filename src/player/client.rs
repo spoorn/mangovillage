@@ -1,6 +1,7 @@
 use std::collections::HashSet;
+
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, Entity, error, info, Input, KeyCode, Plugin, Query, Res, ResMut, SystemSet};
+use bevy::prelude::{AssetServer, Commands, default, Entity, error, info, Input, KeyCode, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, SystemSet, Transform, Vec2};
 use bevy::utils::HashMap;
 
 use crate::client::resources::{ClientId, ClientPacketManager};
@@ -8,8 +9,7 @@ use crate::common::components::Position;
 use crate::common::Direction;
 use crate::networking::client_packets::Move;
 use crate::networking::server_packets::{UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder};
-use crate::player::components::Player;
-use crate::player::spawn_player;
+use crate::player::components::{ClientPlayer, Me};
 use crate::state::ClientState;
 
 pub struct PlayerClientPlugin;
@@ -45,7 +45,7 @@ fn movement_input(keys: Res<Input<KeyCode>>, mut manager: ResMut<ClientPacketMan
     }
 }
 
-fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mut Position, Entity)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
+fn update_players(mut commands: Commands, mut players_query: Query<(&ClientPlayer, &mut Position, Entity)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
     let update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
     if let Some(update_players) = update_players {
         // We only care about the last update
@@ -67,7 +67,7 @@ fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mu
                     p.y = player.position.1;
                 } else {
                     // New player
-                    spawn_player(&mut commands, Some(&asset_server), player.id, player.position, player.id == client_id.id);
+                    spawn_player(&mut commands, &asset_server, player.id, player.position, player.id == client_id.id);
                 }
             }
             
@@ -81,4 +81,25 @@ fn update_players(mut commands: Commands, mut players_query: Query<(&Player, &mu
     }
     
     // TODO: handle removed players, can probably optimize above a bit if we do this
+}
+
+pub fn spawn_player(commands: &mut Commands, asset_server: &Res<AssetServer>, id: u32, position: (f32, f32), is_self: bool) {
+    info!("[client] Spawning new player at ({}, {})", position.0, position.1);
+    let mut player_spawn = commands
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2::splat(12.0)),
+                ..default()
+            },
+            transform: Transform::from_xyz(0.0, 0.0, 10.0),
+            texture: asset_server.load("icon/test.png"),
+            ..default()
+        });
+    player_spawn
+        .insert(ClientPlayer { id })
+        .insert(Position { x: position.0, y: position.1 });
+
+    if is_self {
+        player_spawn.insert(Me);
+    }
 }

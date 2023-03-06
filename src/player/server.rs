@@ -1,37 +1,93 @@
 use bevy::app::App;
-use bevy::prelude::{Plugin, Query, ResMut};
-use bevy::utils::HashMap;
+use bevy::prelude::{Commands, default, Entity, error, info, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, Time, Transform, Vec2, warn};
+use bevy::utils::{HashMap, HashSet};
+use rand::Rng;
+
 use crate::common::components::Position;
 use crate::networking::client_packets::{Move, MovePacketBuilder};
-use crate::networking::server_packets::{PlayerPosition, UpdatePlayerPositions};
-use crate::player::components::Player;
+use crate::networking::server_packets::{PlayerPosition, SpawnAck, UpdatePlayerPositions};
+use crate::player::components::ServerPlayer;
 use crate::player::handle_move;
 use crate::server::resources::ServerPacketManager;
+use crate::world::components::World;
+use crate::world::LEVEL_IIDS;
 
 pub struct PlayerServerPlugin;
 impl Plugin for PlayerServerPlugin {
     
     fn build(&self, app: &mut App) {
         app.add_system(send_player_positions)
-             .add_system(handle_player_move);
+             .add_system(handle_player_move)
+             .add_system(accept_new_player);
+    }
+}
+
+/// Adds new players to player pool
+fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPlayer, &mut Position, Entity)>, mut manager: ResMut<ServerPacketManager>) {
+    let clients = manager.get_client_connections();
+    let client_ids: HashSet<&u32> = clients.iter().map(|(_addr, id)| id).collect();
+
+    let mut removed_players = Vec::new();
+    // TODO: there has to be a faster way to do this than creating a map every iteration?  Can use a set too
+    let mut players = HashMap::new();
+    for (player, position, entity) in players_query.iter_mut() {
+        players.insert(player.id, position);
+        if !client_ids.contains(&player.id) {
+            removed_players.push((player.id, entity));
+        }
+    }
+
+    // TODO: handle removed players
+    let mut new_players: Vec<(&String, &u32)> = Vec::new();
+    if clients.len() != players.len() {
+        for (addr, id) in clients.iter() {
+            if !players.contains_key(id) {
+                new_players.push((addr, id));
+            }
+        }
+    }
+
+    for (addr, id) in new_players.into_iter() {
+        info!("[server] Found new player with addr={}, id={}", addr, id);
+        let level_iid = LEVEL_IIDS[rand::thread_rng().gen_range(0..LEVEL_IIDS.len())].to_string();
+        let world = World { level_iid: level_iid.clone() };
+        spawn_player(&mut commands, addr.clone(), *id, (148.0, 88.0), world);
+        if let Err(e) = manager.send_to(addr, SpawnAck { id: *id, level_iid }) {
+            error!("[server] Failed to send SpawnAck to addr={}.  Error: {}", addr, e);
+        }
+    }
+
+    for (id, entity) in removed_players.into_iter() {
+        info!("[server] Despawning player with id={}", id);
+        commands.entity(entity).despawn();
     }
 }
 
 // TODO: optimize: Don't send all player positions constantly, only changed
-fn send_player_positions(players: Query<(&Player, &Position)>, mut manager: ResMut<ServerPacketManager>) {
-    // TODO: send players per map to clients in that map
-    let mut pps: Vec<PlayerPosition> = Vec::new();
-    for (player, pos) in players.iter() {
-        pps.push(PlayerPosition {
+// TODO: optimize: cache World -> Player data instead of querying every iteration like this
+// TODO: optimize: Send player positions for each world independently in parallel
+fn send_player_positions(players: Query<(&ServerPlayer, &Position, &World)>, mut manager: ResMut<ServerPacketManager>) {
+    // Level iid -> (Client addresses in the Level, player positions in the Level)
+    let mut pps: HashMap<String, (Vec<&String>, Vec<PlayerPosition>)> = HashMap::new();
+    for (player, pos, world) in players.iter() {
+        let entry = pps.entry(world.level_iid.to_string()).or_insert((Vec::new(), Vec::new()));
+        entry.0.push(&player.addr);
+        entry.1.push(PlayerPosition {
             id: player.id,
             position: (pos.x, pos.y)
         });
     }
     
-    manager.broadcast(UpdatePlayerPositions { positions: pps }).unwrap();
+    for (_level_iid, (addrs, pps)) in pps {
+        for addr in addrs {
+            if let Err(e) = manager.send_to(addr, UpdatePlayerPositions { positions: pps.to_vec() }) {
+                warn!("[server] Could not send updated player positions to addr={}.  They may have disconnected.  Error: {}", addr, e);
+            }
+        }
+    }
 }
 
-fn handle_player_move(mut players_query: Query<(&Player, &mut Position)>, mut manager: ResMut<ServerPacketManager>) {
+fn handle_player_move(time: Res<Time>, mut players_query: Query<(&ServerPlayer, &mut Position)>, mut manager: ResMut<ServerPacketManager>) {
     let move_packets = manager.received_all::<Move, MovePacketBuilder>(false).unwrap();
     
     if !move_packets.is_empty() {
@@ -48,10 +104,27 @@ fn handle_player_move(mut players_query: Query<(&Player, &mut Position)>, mut ma
                 if let Some(last) = moves.last() {
                     let player_id = manager.get_client_id(addr).unwrap();
                     if let Some(mut position) = players.get_mut(&player_id) {
-                        handle_move(last.dir, &mut position);
+                        handle_move(&time, last.dir, &mut position);
                     }
                 }
             }
         }
     }
+}
+
+pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: (f32, f32), world: World) {
+    info!("[server] Spawning new player at ({}, {})", position.0, position.1);
+    let mut player_spawn = commands
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2::splat(12.0)),
+                ..default()
+            },
+            transform: Transform::from_xyz(0.0, 0.0, 10.0),
+            ..default()
+        });
+    player_spawn
+        .insert(ServerPlayer { id, addr })
+        .insert(Position { x: position.0, y: position.1 })
+        .insert(world);
 }
