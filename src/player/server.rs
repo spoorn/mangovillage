@@ -1,24 +1,29 @@
 use bevy::app::App;
-use bevy::prelude::{Commands, default, Entity, error, info, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, Time, Transform, Vec2, warn};
+use bevy::prelude::{Commands, default, Entity, error, info, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, SystemSet, Time, Transform, Vec2, warn};
 use bevy::utils::{HashMap, HashSet};
 use rand::Rng;
 
 use crate::common::components::Position;
 use crate::networking::client_packets::{Move, MovePacketBuilder};
-use crate::networking::server_packets::{PlayerPosition, SpawnAck, UpdatePlayerPositions};
+use crate::networking::server_packets::{ChangeLevel, PlayerPosition, SpawnAck, UpdatePlayerPositions};
 use crate::player::components::ServerPlayer;
 use crate::player::handle_move;
 use crate::server::resources::ServerPacketManager;
-use crate::world::components::World;
+use crate::state::server::ServerState;
+use crate::world;
+use crate::world::components::WorldComponent;
 use crate::world::LEVEL_IIDS;
+use crate::world::resources::World;
 
 pub struct PlayerServerPlugin;
 impl Plugin for PlayerServerPlugin {
     
     fn build(&self, app: &mut App) {
-        app.add_system(send_player_positions)
-             .add_system(handle_player_move)
-             .add_system(accept_new_player);
+        app.add_system_set(SystemSet::on_update(ServerState::Running)
+            .with_system(send_player_positions)
+            .with_system(handle_player_move)
+            .with_system(accept_new_player)
+        );
     }
 }
 
@@ -37,7 +42,6 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPl
         }
     }
 
-    // TODO: handle removed players
     let mut new_players: Vec<(&String, &u32)> = Vec::new();
     if clients.len() != players.len() {
         for (addr, id) in clients.iter() {
@@ -50,7 +54,7 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPl
     for (addr, id) in new_players.into_iter() {
         info!("[server] Found new player with addr={}, id={}", addr, id);
         let level_iid = LEVEL_IIDS[rand::thread_rng().gen_range(0..LEVEL_IIDS.len())].to_string();
-        let world = World { level_iid: level_iid.clone() };
+        let world = WorldComponent { level_iid: level_iid.clone() };
         spawn_player(&mut commands, addr.clone(), *id, (148.0, 88.0), world);
         if let Err(e) = manager.send_to(addr, SpawnAck { id: *id, level_iid }) {
             error!("[server] Failed to send SpawnAck to addr={}.  Error: {}", addr, e);
@@ -66,7 +70,7 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPl
 // TODO: optimize: Don't send all player positions constantly, only changed
 // TODO: optimize: cache World -> Player data instead of querying every iteration like this
 // TODO: optimize: Send player positions for each world independently in parallel
-fn send_player_positions(players: Query<(&ServerPlayer, &Position, &World)>, mut manager: ResMut<ServerPacketManager>) {
+fn send_player_positions(players: Query<(&ServerPlayer, &Position, &WorldComponent)>, mut manager: ResMut<ServerPacketManager>) {
     // Level iid -> (Client addresses in the Level, player positions in the Level)
     let mut pps: HashMap<String, (Vec<&String>, Vec<PlayerPosition>)> = HashMap::new();
     for (player, pos, world) in players.iter() {
@@ -87,14 +91,14 @@ fn send_player_positions(players: Query<(&ServerPlayer, &Position, &World)>, mut
     }
 }
 
-fn handle_player_move(time: Res<Time>, mut players_query: Query<(&ServerPlayer, &mut Position)>, mut manager: ResMut<ServerPacketManager>) {
+fn handle_player_move(time: Res<Time>, mut players_query: Query<(&ServerPlayer, &mut Position, &mut WorldComponent)>, mut manager: ResMut<ServerPacketManager>, world: Res<World>) {
     let move_packets = manager.received_all::<Move, MovePacketBuilder>(false).unwrap();
     
     if !move_packets.is_empty() {
         // TODO: there has to be a faster way to do this than creating a map every iteration?  Can use a set too
         let mut players = HashMap::new();
-        for (player, position) in players_query.iter_mut() {
-            players.insert(player.id, position);
+        for (player, position, world_component) in players_query.iter_mut() {
+            players.insert(player.id, (position, world_component));
         }
         
         for (addr, moves) in move_packets.iter() {
@@ -103,8 +107,14 @@ fn handle_player_move(time: Res<Time>, mut players_query: Query<(&ServerPlayer, 
                 //for last in moves.iter() {
                 if let Some(last) = moves.last() {
                     let player_id = manager.get_client_id(addr).unwrap();
-                    if let Some(mut position) = players.get_mut(&player_id) {
-                        handle_move(&time, last.dir, &mut position);
+                    if let Some(player_data) = players.get_mut(&player_id) {
+                        if let Some(change_level) = handle_move(&time, last.dir, &mut player_data.0, &player_data.1.level_iid, &world) {
+                            if let Err(e) = manager.send_to(addr, ChangeLevel { level_iid: change_level.clone() }) {
+                                warn!("[server] Could not send ChangeLevel to addr={}. Error: {}", addr, e);
+                            } else {
+                                player_data.1.level_iid = change_level;
+                            }
+                        }
                     }
                 }
             }
@@ -112,7 +122,7 @@ fn handle_player_move(time: Res<Time>, mut players_query: Query<(&ServerPlayer, 
     }
 }
 
-pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: (f32, f32), world: World) {
+pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: (f32, f32), world: WorldComponent) {
     info!("[server] Spawning new player at ({}, {})", position.0, position.1);
     let mut player_spawn = commands
         .spawn(SpriteBundle {

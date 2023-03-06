@@ -1,5 +1,2 @@
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum ClientState {
-    JoiningServer,
-    Running
-}
+pub mod client;
+pub mod server;

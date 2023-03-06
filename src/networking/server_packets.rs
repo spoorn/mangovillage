@@ -21,3 +21,8 @@ pub struct PlayerPosition {
     pub id: u32,
     pub position: (f32, f32)
 }
+
+#[bincode_packet]
+pub struct ChangeLevel {
+    pub level_iid: String
+}

@@ -1,6 +1,6 @@
 use bevy::prelude::Component;
 
 #[derive(Component)]
-pub struct World {
+pub struct WorldComponent {
     pub level_iid: String
 }

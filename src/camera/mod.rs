@@ -4,7 +4,7 @@ use bevy_ecs_ldtk::{LdtkLevel, LevelSelection};
 use bevy_render::prelude::{Camera, OrthographicProjection};
 
 use crate::player::components::{Me, ClientPlayer};
-use crate::state::ClientState;
+use crate::state::client::ClientState;
 
 pub struct CameraPlugin;
 

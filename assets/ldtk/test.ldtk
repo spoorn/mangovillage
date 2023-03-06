@@ -841,7 +841,7 @@
 					"entityInstances": []
 				}
 			],
-			"__neighbours": [ { "levelIid": "db9e9610-9f30-11ed-9161-49318aa2f89c", "dir": "e" }, { "levelIid": "be35e6d0-9f30-11ed-8926-a5994758ef9b", "dir": "s" } ]
+			"__neighbours": [{ "levelIid": "db9e9610-9f30-11ed-9161-49318aa2f89c", "dir": "e" }]
 		},
 		{
 			"identifier": "World_Level_1",
@@ -1072,7 +1072,7 @@
 			"identifier": "World_Level_2",
 			"iid": "be35e6d0-9f30-11ed-8926-a5994758ef9b",
 			"uid": 110,
-			"worldX": -232,
+			"worldX": 296,
 			"worldY": 176,
 			"worldDepth": 0,
 			"pxWid": 800,
@@ -1838,7 +1838,7 @@
 					"entityInstances": []
 				}
 			],
-			"__neighbours": [ { "levelIid": "a2a50ff0-66b0-11ec-9cd7-c721746049b9", "dir": "n" }, { "levelIid": "db9e9610-9f30-11ed-9161-49318aa2f89c", "dir": "n" } ]
+			"__neighbours": [{ "levelIid": "db9e9610-9f30-11ed-9161-49318aa2f89c", "dir": "n" }]
 		}
 	],
 	"worlds": []

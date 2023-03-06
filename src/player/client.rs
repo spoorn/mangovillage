@@ -10,7 +10,7 @@ use crate::common::Direction;
 use crate::networking::client_packets::Move;
 use crate::networking::server_packets::{UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder};
 use crate::player::components::{ClientPlayer, Me};
-use crate::state::ClientState;
+use crate::state::client::ClientState;
 
 pub struct PlayerClientPlugin;
 impl Plugin for PlayerClientPlugin {

@@ -1,6 +1,7 @@
 pub mod client;
 pub mod server;
 pub mod components;
+pub mod resources;
 
 pub const LEVEL_IIDS: [&str; 3] = [
     "a2a50ff0-66b0-11ec-9cd7-c721746049b9",

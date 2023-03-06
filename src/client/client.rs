@@ -9,8 +9,8 @@ use durian::{ClientConfig, PacketManager, register_receive, register_send};
 use crate::client::resources::{ClientId, ClientInfo, ClientPacketManager};
 use crate::common::util;
 use crate::networking::client_packets::{Disconnect, Move};
-use crate::networking::server_packets::{SpawnAck, SpawnAckPacketBuilder, UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder};
-use crate::state::ClientState;
+use crate::networking::server_packets::{ChangeLevel, ChangeLevelPacketBuilder, SpawnAck, SpawnAckPacketBuilder, UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder};
+use crate::state::client::ClientState;
 
 pub struct ClientPlugin {
     pub client_addr: String,
@@ -34,12 +34,12 @@ impl Plugin for ClientPlugin {
 fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     let mut manager = PacketManager::new();
     // register packets client-side
-    let receives = util::validate_results(true, register_receive!(manager, (UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder), (SpawnAck, SpawnAckPacketBuilder)));
+    let receives = util::validate_results(true, register_receive!(manager, (UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder), (SpawnAck, SpawnAckPacketBuilder), (ChangeLevel, ChangeLevelPacketBuilder)));
     let sends = util::validate_results(true, register_send!(manager, Move, Disconnect));
     // TODO: better error handling
     if !receives { panic!("Failed to register all receive packets"); }
     if !sends { panic!("Failed to register all send packets"); }
-    let mut client_config = ClientConfig::new(client_info.client_addr.clone(), client_info.server_addr.clone(), 2, 2);
+    let mut client_config = ClientConfig::new(client_info.client_addr.clone(), client_info.server_addr.clone(), 3, 2);
     // Server sends keep alive packets
     client_config.with_keep_alive_interval(Duration::from_secs(30)).with_idle_timeout(Duration::from_secs(60));
     manager.init_client(client_config).unwrap();
