@@ -43,8 +43,9 @@ fn handle_move(time: &Res<Time>, direction: Direction, position: &mut Position, 
                     position.x = world.maps.get(&neighbor).unwrap().bounds[1];
                     return Some(neighbor);
                 }
+            } else {
+                position.x -= movement;
             }
-            position.x -= movement; 
         }
         Direction::Up => {
             if position.y >= map.bounds[3] {
@@ -52,8 +53,9 @@ fn handle_move(time: &Res<Time>, direction: Direction, position: &mut Position, 
                     position.y = world.maps.get(&neighbor).unwrap().bounds[2];
                     return Some(neighbor);
                 }
+            } else {
+                position.y += movement;
             }
-            position.y += movement;
         }
         Direction::Right => {
             if position.x >= map.bounds[1] {
@@ -61,8 +63,9 @@ fn handle_move(time: &Res<Time>, direction: Direction, position: &mut Position, 
                     position.x = world.maps.get(&neighbor).unwrap().bounds[0];
                     return Some(neighbor);
                 }
+            } else {
+                position.x += movement;
             }
-            position.x += movement;
         }
         Direction::Down => {
             if position.y <= map.bounds[2] {
@@ -70,8 +73,9 @@ fn handle_move(time: &Res<Time>, direction: Direction, position: &mut Position, 
                     position.y = world.maps.get(&neighbor).unwrap().bounds[3];
                     return Some(neighbor);
                 }
+            } else {
+                position.y -= movement;
             }
-            position.y -= movement;
         }
     }
     None

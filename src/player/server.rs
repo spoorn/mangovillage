@@ -10,7 +10,6 @@ use crate::player::components::ServerPlayer;
 use crate::player::handle_move;
 use crate::server::resources::ServerPacketManager;
 use crate::state::server::ServerState;
-use crate::world;
 use crate::world::components::WorldComponent;
 use crate::world::LEVEL_IIDS;
 use crate::world::resources::World;
@@ -28,7 +27,7 @@ impl Plugin for PlayerServerPlugin {
 }
 
 /// Adds new players to player pool
-fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPlayer, &mut Position, Entity)>, mut manager: ResMut<ServerPacketManager>) {
+fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPlayer, &mut Position, Entity)>, mut manager: ResMut<ServerPacketManager>, world: Res<World>) {
     let clients = manager.get_client_connections();
     let client_ids: HashSet<&u32> = clients.iter().map(|(_addr, id)| id).collect();
 
@@ -54,8 +53,9 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPl
     for (addr, id) in new_players.into_iter() {
         info!("[server] Found new player with addr={}, id={}", addr, id);
         let level_iid = LEVEL_IIDS[rand::thread_rng().gen_range(0..LEVEL_IIDS.len())].to_string();
-        let world = WorldComponent { level_iid: level_iid.clone() };
-        spawn_player(&mut commands, addr.clone(), *id, (148.0, 88.0), world);
+        let world_component = WorldComponent { level_iid: level_iid.clone() };
+        // TODO: Randomize exact pixel placement of player spawn
+        spawn_player(&mut commands, addr.clone(), *id, world.maps.get(&level_iid).unwrap().player_spawn, world_component);
         if let Err(e) = manager.send_to(addr, SpawnAck { id: *id, level_iid }) {
             error!("[server] Failed to send SpawnAck to addr={}.  Error: {}", addr, e);
         }
@@ -107,12 +107,12 @@ fn handle_player_move(time: Res<Time>, mut players_query: Query<(&ServerPlayer, 
                 //for last in moves.iter() {
                 if let Some(last) = moves.last() {
                     let player_id = manager.get_client_id(addr).unwrap();
-                    if let Some(player_data) = players.get_mut(&player_id) {
-                        if let Some(change_level) = handle_move(&time, last.dir, &mut player_data.0, &player_data.1.level_iid, &world) {
+                    if let Some((ref mut position, ref mut world_component)) = players.get_mut(&player_id) {
+                        if let Some(change_level) = handle_move(&time, last.dir, position, &world_component.level_iid, &world) {
                             if let Err(e) = manager.send_to(addr, ChangeLevel { level_iid: change_level.clone() }) {
                                 warn!("[server] Could not send ChangeLevel to addr={}. Error: {}", addr, e);
                             } else {
-                                player_data.1.level_iid = change_level;
+                                world_component.level_iid = change_level;
                             }
                         }
                     }

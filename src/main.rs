@@ -82,6 +82,7 @@ fn main() {
                     .add_plugin(player::server::PlayerServerPlugin)
                     .add_plugin(player::PlayerCommonPlugin)
                     .add_plugin(world::server::LdtkServerPlugin)
+                    .add_plugin(bevy_inspector_egui::quick::WorldInspectorPlugin)
                     .run();
             }
         };

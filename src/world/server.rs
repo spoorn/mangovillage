@@ -1,9 +1,10 @@
 use bevy::app::App;
-use bevy::prelude::{Assets, AssetServer, Commands, default, Handle, info, Plugin, Query, Res, ResMut, State, SystemSet, Transform};
+use bevy::prelude::{Assets, AssetServer, Commands, default, Handle, info, Parent, Plugin, Query, Res, ResMut, State, SystemSet, Transform, With};
 use bevy_ecs_ldtk::{LdtkAsset, LdtkLevel, LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSet, LevelSpawnBehavior};
-use bevy_ecs_ldtk::ldtk::NeighbourLevel;
+use bevy_ecs_ldtk::prelude::RegisterLdtkObjects;
 
 use crate::state::server::ServerState;
+use crate::world::components::{PlayerSpawn, PlayerSpawnBundle};
 use crate::world::LEVEL_IIDS;
 use crate::world::resources::{Map, World};
 
@@ -12,7 +13,8 @@ impl Plugin for LdtkServerPlugin {
     
     fn build(&self, app: &mut App) {
         app.add_plugin(LdtkPlugin)
-            .add_state(ServerState::Loading)
+            .register_ldtk_entity::<PlayerSpawnBundle>("PlayerSpawn")
+            .add_state(ServerState::LoadWorld)
             .insert_resource(LdtkSettings {
                 level_spawn_behavior: LevelSpawnBehavior::UseWorldTranslation {
                     load_level_neighbors: true,
@@ -20,8 +22,11 @@ impl Plugin for LdtkServerPlugin {
                 ..Default::default()
             })
             .add_startup_system(load_level)
-            .add_system_set(SystemSet::on_update(ServerState::Loading)
+            .add_system_set(SystemSet::on_update(ServerState::LoadWorld)
                 .with_system(cache_world)
+            )
+            .add_system_set(SystemSet::on_update(ServerState::LoadEntities)
+                .with_system(load_entities)
             );
     }
 }
@@ -38,19 +43,38 @@ fn load_level(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn cache_world(mut commands: Commands, level_query: Query<(&Transform, &Handle<LdtkAsset>)>, ldtk_assets: Res<Assets<LdtkAsset>>, ldtk_levels: Res<Assets<LdtkLevel>>, mut server_state: ResMut<State<ServerState>>) {
     let mut world = World::default();
     let (level_transform, ldtk_asset_handle) = level_query.single();
-    let ldtk_asset = ldtk_assets.get(ldtk_asset_handle).unwrap();
-    for (iid, level_handle) in &ldtk_asset.level_map {
-        let level = &ldtk_levels.get(&level_handle).unwrap().level;
-        let base_x = level_transform.translation.x;
-        let base_y = level_transform.translation.y;
-        assert!(level.neighbours.len() < 5, "Level {} has more than 4 neighbors", level.iid);
-        world.maps.insert(iid.clone(), Map {
-            bounds: [base_x, base_x + level.px_wid as f32, base_y, base_y + level.px_hei as f32],
-            neighbors: level.neighbours.iter().map(|neighbor| (neighbor.dir.clone(), neighbor.level_iid.clone())).collect()
-        });
+    if let Some(ldtk_asset) = ldtk_assets.get(ldtk_asset_handle) {
+        for (iid, level_handle) in &ldtk_asset.level_map {
+            let level = &ldtk_levels.get(&level_handle).unwrap().level;
+            let base_x = level_transform.translation.x;
+            let base_y = level_transform.translation.y;
+            assert!(level.neighbours.len() < 5, "Level {} has more than 4 neighbors", level.iid);
+            world.maps.insert(iid.clone(), Map {
+                bounds: [base_x, base_x + level.px_wid as f32, base_y, base_y + level.px_hei as f32],
+                neighbors: level.neighbours.iter().map(|neighbor| (neighbor.dir.clone(), neighbor.level_iid.clone())).collect(),
+                ..default()
+            });
+        }
+        info!("[server] Cached world");
+        commands.insert_resource(world);
+        server_state.set(ServerState::LoadEntities).unwrap();
     }
-    info!("[server] Loaded world: {:#?}", world);
-    commands.insert_resource(world);
-    server_state.set(ServerState::Running).unwrap();
+}
+
+// TODO: LdtkEntities are not available to query in the first iteration for some reason.  So we need to keep checking
+// until it's available.
+fn load_entities(player_spawns: Query<(&Transform, &Parent), With<PlayerSpawn>>, level_query: Query<&Handle<LdtkLevel>>, ldtk_levels: Res<Assets<LdtkLevel>>, mut world: ResMut<World>, mut server_state: ResMut<State<ServerState>>) {
+    let mut done = false;
+
+    for (transform, parent) in &player_spawns {
+        let level_handle = level_query.get(parent.get()).unwrap();
+        let level = ldtk_levels.get(level_handle).unwrap();
+        world.maps.get_mut(&level.level.iid).unwrap().player_spawn = (transform.translation.x, transform.translation.y);
+        done = true;  // Found player spawns
+    }
+    if done {
+        info!("[server] Finished loading world: {:#?}", world);
+        server_state.set(ServerState::Running).unwrap();
+    }
 }
 
