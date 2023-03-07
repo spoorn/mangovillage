@@ -63,9 +63,21 @@ fn cursor_system(
     {
         let (mut style, mut text) = query.single_mut();
         let cursor_position = cursor_position.unwrap();
+        let mut left_padding = cursor_position.x;
+        let mut bottom_padding = cursor_position.y;
+        if cursor_position.x >= window.width() - 90.0 {
+            left_padding -= 90.0;
+        } else {
+            left_padding += 10.0;
+        }
+        if cursor_position.y >= window.height() - 40.0 {
+            bottom_padding -= 40.0;
+        } else {
+            bottom_padding += 10.0;
+        }
         style.position = UiRect {
-            left: Val::Px(cursor_position.x + 10.0),
-            bottom: Val::Px(cursor_position.y + 10.0),
+            left: Val::Px(left_padding),
+            bottom: Val::Px(bottom_padding),
             ..default()
         };
         text.sections[0].value = format!("({:.2}, {:.2})", world_position.x, world_position.y);

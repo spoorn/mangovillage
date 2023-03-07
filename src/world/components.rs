@@ -1,6 +1,5 @@
 use bevy::prelude::{Bundle, Component};
 use bevy_ecs_ldtk::{EntityInstance, LdtkEntity};
-use bevy_ecs_ldtk::ldtk::FieldInstance;
 use bevy_ecs_ldtk::prelude::FieldValue;
 
 #[derive(Component)]

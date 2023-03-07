@@ -123,7 +123,7 @@ fn handle_player_move(time: Res<Time>, mut players_query: Query<(&ServerPlayer, 
 }
 
 pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: Position, world: WorldComponent) {
-    info!("[server] Spawning new player at {}", position);
+    info!("[server] Spawning new player in {} at {}", world.level_iid, position);
     let mut player_spawn = commands
         .spawn(SpriteBundle {
             sprite: Sprite {

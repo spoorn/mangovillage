@@ -91,14 +91,13 @@ fn load_entities(player_spawns_query: Query<(&Transform, &Parent), With<PlayerSp
         return;
     }
     
-    println!("{}", portal_query.iter().len());
     for (transform, parent, portal) in &portal_query {
         let level_handle = level_query.get(parent.get()).unwrap();
         let level = ldtk_levels.get(level_handle).unwrap();
         let destination = portal.destination.clone();
         assert!(world.maps.contains_key(&destination), "[server] Portal destination={} in Level={} does not exist!", destination, level.level.iid);
         // Transform for entities is the center of the entity, so we need width/height to get the [x1, x2, y1, y2] bounds
-        let map_coords = util::ldtk_to_map_coordinates(GRID_SIZE, portal.ldtk_coords, level.level.px_wid, level.level.px_hei);
+        let map_coords = util::ldtk_to_map_coordinates(GRID_SIZE, portal.ldtk_coords, level.level.px_hei);
         println!("{:?}", transform);
         world.maps.get_mut(&level.level.iid).unwrap().portals.push(PortalInfo([map_coords.0, map_coords.0 + portal.width, map_coords.1 - portal.height, map_coords.1], portal.destination.clone(), portal.link));
         done = true;
