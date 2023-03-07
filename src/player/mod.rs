@@ -1,10 +1,10 @@
 use bevy::app::App;
-use bevy::prelude::{Plugin, Query, Res, Time, Transform, Vec3, With};
+use bevy::prelude::{info, Plugin, Query, Res, Time, Transform, Vec3, With};
 
 use crate::common::components::Position;
 use crate::common::Direction;
 use crate::player::components::ClientPlayer;
-use crate::world::resources::{Map, World};
+use crate::world::resources::{Map, PortalInfo, World};
 
 pub mod client;
 pub mod server;
@@ -28,14 +28,27 @@ pub fn transform_positions(mut query: Query<(&Position, &mut Transform), With<Cl
 }
 
 // Per second
-const PLAYER_MOVE_SPEED: f32 = 500.0;
+const PLAYER_MOVE_SPEED: f32 = 100.0;
 
 /// Handle an entity's movement
 /// 
 /// Optionally returns the new Level to load for the player if they should change levels
+/// 
+/// Note: The portal checking logic assumes no 2 portals are right next to each other or overlaid
+/// TODO: Optimize portal checking logic
 fn handle_move(time: &Res<Time>, direction: Direction, position: &mut Position, current_map: &String, world: &Res<World>) -> Option<String> {
     let movement = PLAYER_MOVE_SPEED * time.delta_seconds();
     let map = world.maps.get(current_map).unwrap();
+    let mut was_in_portal = false;
+
+    // Check if player started in a portal
+    for PortalInfo([x1, x2, y1, y2], _destination, _link) in &world.maps.get(current_map).unwrap().portals {
+        if position.x >= *x1 && position.x <= *x2 && position.y >= *y1 && position.y <= *y2 {
+            was_in_portal = true;
+            break;
+        }
+    }
+    
     match direction {
         Direction::Left => { 
             if position.x <= map.bounds[0] {
@@ -78,6 +91,24 @@ fn handle_move(time: &Res<Time>, direction: Direction, position: &mut Position, 
             }
         }
     }
+    
+    // Portal teleport
+    if !was_in_portal {
+        for PortalInfo([x1, x2, y1, y2], destination, link) in &world.maps.get(current_map).unwrap().portals {
+            if position.x >= *x1 && position.x <= *x2 && position.y >= *y1 && position.y <= *y2 {
+                info!("[server] Player at position={} in Level={} warped to {}", position, current_map, destination);
+                for PortalInfo([d_x1, d_x2, d_y1, d_y2], _d_destination, d_link) in &world.maps.get(destination).unwrap().portals {
+                    if d_link == link {
+                        // TODO: make sure player is grounded
+                        position.x = (d_x1 + d_x2) / 2.0;
+                        position.y = (d_y1 + d_y2) / 2.0;
+                    }
+                }
+                return Some(destination.clone());
+            }
+        }
+    }
+    
     None
 }
 

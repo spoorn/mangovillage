@@ -23,6 +23,7 @@ fn setup_camera(mut commands: Commands) {
 const ASPECT_RATIO: f32 = 16. / 9.;
 
 // TODO: clean up and optimize
+// TODO: Handle narrow maps
 fn follow_player(mut camera_query: Query<(&mut OrthographicProjection, &mut Transform), (With<Camera>, Without<ClientPlayer>)>, player_query: Query<&Transform, (With<ClientPlayer>, With<Me>)>,
                  level_query: Query<
                      (&Transform, &Handle<LdtkLevel>),

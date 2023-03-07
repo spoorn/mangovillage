@@ -1,9 +1,10 @@
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, GlobalTransform, Plugin, Query, Res, Style, Text, TextBundle, TextSection, TextStyle, Transform, UiRect, Val, Windows, With};
+use bevy::prelude::{AssetServer, Commands, GlobalTransform, Plugin, Query, Res, Style, Text, TextBundle, TextStyle, UiRect, Val, Windows, With};
 use bevy::ui::PositionType;
 use bevy::utils::default;
 use bevy_render::camera::RenderTarget;
 use bevy_render::prelude::{Camera, Color};
+
 use crate::debug::components::MouseCoordinateText;
 
 pub struct DebugClientPlugin;
