@@ -21,6 +21,7 @@ mod map;
 mod common;
 mod world;
 mod state;
+mod debug;
 
 // For hiding the console window on client mode
 fn hide_console_window() {
@@ -127,6 +128,7 @@ fn main() {
             .add_plugin(player::client::PlayerClientPlugin)
             .add_plugin(player::PlayerCommonPlugin)
             .add_plugin(world::client::LdtkClientPlugin)
+            .add_plugin(debug::client::DebugClientPlugin)
             .run();
     }
 }
