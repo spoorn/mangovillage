@@ -1,8 +1,8 @@
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, GlobalTransform, Plugin, Query, Res, Style, Text, TextBundle, TextStyle, UiRect, Val, Windows, With};
+use bevy::prelude::{AssetServer, Commands, GlobalTransform, Plugin, Query, Res, Style, Text, TextBundle, TextStyle, UiRect, Val, Window, With};
 use bevy::ui::PositionType;
 use bevy::utils::default;
-use bevy_render::camera::RenderTarget;
+use bevy::window::PrimaryWindow;
 use bevy_render::prelude::{Camera, Color};
 
 use crate::debug::components::MouseCoordinateText;
@@ -36,8 +36,8 @@ fn init_cursor_system(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn cursor_system(
-    // need to get window dimensions
-    windows: Res<Windows>,
+    // need to get window dimensions of primary window
+    windows: Query<&Window, With<PrimaryWindow>>,
     // query to get camera transform
     camera_q: Query<(&Camera, &GlobalTransform)>,
     // text
@@ -48,11 +48,13 @@ fn cursor_system(
     let (camera, camera_transform) = camera_q.single();
 
     // get the window that the camera is displaying to (or the primary window)
-    let window = if let RenderTarget::Window(id) = camera.target {
-        windows.get(id).unwrap()
-    } else {
-        windows.get_primary().unwrap()
-    };
+    // let window = if let RenderTarget::Window(id) = camera.target {
+    //     windows.get(id).unwrap()
+    // } else {
+    //     windows.get_primary().unwrap()
+    // };
+    // TODO: Make this work for multiple windows
+    let window = windows.get_single().unwrap();
 
     // check if the cursor is inside the window and get its position
     // then, ask bevy to convert into world coordinates, and truncate to discard Z

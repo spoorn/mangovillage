@@ -1,5 +1,5 @@
 use bevy::app::App;
-use bevy::prelude::{Commands, default, Entity, error, info, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, SystemSet, Time, Transform, Vec2, warn};
+use bevy::prelude::{Commands, default, Entity, error, info, IntoSystemConfigs, OnUpdate, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, Time, Transform, Vec2, warn};
 use bevy::utils::{HashMap, HashSet};
 use rand::Rng;
 
@@ -18,11 +18,7 @@ pub struct PlayerServerPlugin;
 impl Plugin for PlayerServerPlugin {
     
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_update(ServerState::Running)
-            .with_system(send_player_positions)
-            .with_system(handle_player_move)
-            .with_system(accept_new_player)
-        );
+        app.add_systems((send_player_positions, handle_player_move, accept_new_player).in_set(OnUpdate(ServerState::Running)));
     }
 }
 

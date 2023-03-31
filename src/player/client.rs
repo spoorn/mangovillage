@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, default, Entity, error, info, Input, KeyCode, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, SystemSet, Transform, Vec2};
+use bevy::prelude::{AssetServer, Commands, default, Entity, error, info, Input, IntoSystemConfigs, KeyCode, OnUpdate, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, Transform, Vec2};
 use bevy::utils::HashMap;
 
 use crate::client::resources::{ClientId, ClientPacketManager};
@@ -16,11 +16,7 @@ pub struct PlayerClientPlugin;
 impl Plugin for PlayerClientPlugin {
     
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::on_update(ClientState::Running)
-                .with_system(movement_input)
-                .with_system(update_players)
-        );
+        app.add_systems((movement_input, update_players).in_set(OnUpdate(ClientState::Running)));
     }
 }
 

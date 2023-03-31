@@ -28,8 +28,8 @@ pub struct Portal {
     pub height: f32
 }
 
-impl From<EntityInstance> for Portal {
-    fn from(entity_instance: EntityInstance) -> Self {
+impl From<&EntityInstance> for Portal {
+    fn from(entity_instance: &EntityInstance) -> Self {
         let mut destination = None;
         let mut link = None;
         for field in &entity_instance.field_instances {

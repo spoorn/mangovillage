@@ -7,7 +7,7 @@ use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::sprite::SpritePlugin;
-use bevy::window::{ModifiesWindows, WindowDescriptor};
+use bevy::window::{WindowResolution};
 use bevy::winit::{UpdateMode, winit_runner, WinitPlugin, WinitSettings, WinitWindows};
 use bevy_embedded_assets::EmbeddedAssetPlugin;
 use bevy_render::RenderPlugin;
@@ -83,7 +83,7 @@ fn main() {
                     .add_plugin(player::server::PlayerServerPlugin)
                     .add_plugin(player::PlayerCommonPlugin)
                     .add_plugin(world::server::LdtkServerPlugin)
-                    .add_plugin(bevy_inspector_egui::quick::WorldInspectorPlugin)
+                    .add_plugin(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
                     .run();
             }
         };
@@ -112,14 +112,12 @@ fn main() {
                 .add_before::<AssetPlugin, _>(EmbeddedAssetPlugin)
                 .set({
                     WindowPlugin {
-                        window: WindowDescriptor {
+                        primary_window: Some(Window {
                             title: "Mango Village".to_string(),
-                            width: 1280.0,
-                            height: 720.0,
-                            position: WindowPosition::Centered,
-                            monitor: MonitorSelection::Current,
+                            resolution: WindowResolution::new(1280.0, 720.0),
+                            position: WindowPosition::Centered(MonitorSelection::Primary),
                             ..default()
-                        },
+                        }),
                         ..default()
                     }
             }))

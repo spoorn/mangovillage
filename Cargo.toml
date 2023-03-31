@@ -6,13 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.9.1"
-bevy-inspector-egui = "0.17.0"
-bevy_ecs_ldtk = "0.5.0"
+bevy = "0.10"
+bevy-inspector-egui = "0.18"
+bevy_ecs_ldtk = "0.6"
 # Bug in bevy_ecs_tilemap where background is blended with white tiles: https://github.com/Trouv/bevy_ecs_ldtk/issues/65
-bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap", rev = "3171dcb02bf3ef0183727d507005cfd354e708c6" }
-bevy_embedded_assets = "0.6"
-bevy_render = "0.9.1"
+bevy_ecs_tilemap = "0.10.0"
+bevy_embedded_assets = "0.7"
+bevy_render = "0.10"
 durian = { path = "../durian/durian" }
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
