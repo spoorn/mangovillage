@@ -45,26 +45,28 @@ fn follow_player(mut camera_query: Query<(&mut OrthographicProjection, &mut Tran
                 if level_selection.is_match(&0, level) {
                     let level_ratio = level.px_wid as f32 / level.px_hei as f32;
                     
-                    // TODO: Fix
                     if level_ratio > ASPECT_RATIO {
                         // level is wider than the screen
                         let y = (level.px_hei as f32 / 9.).round() * 9.;
                         let x = y * ASPECT_RATIO;
-                        orthographic_projection.scaling_mode =
-                            bevy::render::camera::ScalingMode::Fixed { width: x, height: y };
-                        orthographic_projection.area.max.y = y/2.0;
-                        orthographic_projection.area.max.x = x/2.0;
-                        orthographic_projection.area.min.y = -y/2.0;
-                        orthographic_projection.area.min.x = -x/2.0;
+                        orthographic_projection.scaling_mode = ScalingMode::Fixed { 
+                            width: f32::min(x, 320.0), height: f32::min(y, 180.0)
+                        };
+                        // orthographic_projection.area.max.y = y/2.0;
+                        // orthographic_projection.area.max.x = x/2.0;
+                        // orthographic_projection.area.min.y = -y/2.0;
+                        // orthographic_projection.area.min.x = -x/2.0;
                     } else {
                         // level is taller than the screen
-                        let y = (level.px_wid as f32 / 16.).round() * 16.;
-                        let x = y / ASPECT_RATIO;
-                        orthographic_projection.scaling_mode = ScalingMode::Fixed { width: y, height: x };
-                        orthographic_projection.area.max.y = x/2.0;
-                        orthographic_projection.area.max.x = y/2.0;
-                        orthographic_projection.area.min.y = -x/2.0;
-                        orthographic_projection.area.min.x = -y/2.0;
+                        let x = (level.px_wid as f32 / 16.).round() * 16.;
+                        let y = x / ASPECT_RATIO;
+                        orthographic_projection.scaling_mode = ScalingMode::Fixed {
+                            width: f32::min(x, 320.0), height: f32::min(y, 180.0)
+                        };
+                        // orthographic_projection.area.max.y = x/2.0;
+                        // orthographic_projection.area.max.x = y/2.0;
+                        // orthographic_projection.area.min.y = -x/2.0;
+                        // orthographic_projection.area.min.x = -y/2.0;
                     }
                     
                     // orthographic_project is negative for left/bottom, positive for right/up
@@ -78,26 +80,16 @@ fn follow_player(mut camera_query: Query<(&mut OrthographicProjection, &mut Tran
                     // camera.y + ortho.top < level.y + level.height
                     
                     // Max the projection to 160x90 so maps have consistent zoom scale
-                    orthographic_projection.area.max.y = f32::min(orthographic_projection.area.max.y, 90.0);
-                    orthographic_projection.area.min.y = f32::max(orthographic_projection.area.min.y, -90.0);
-                    orthographic_projection.area.min.x = f32::max(orthographic_projection.area.min.x, -160.0);
-                    orthographic_projection.area.max.x = f32::min(orthographic_projection.area.max.x, 160.0);
+                    // orthographic_projection.area.max.y = f32::min(orthographic_projection.area.max.y, 90.0);
+                    // orthographic_projection.area.min.y = f32::max(orthographic_projection.area.min.y, -90.0);
+                    // orthographic_projection.area.min.x = f32::max(orthographic_projection.area.min.x, -160.0);
+                    // orthographic_projection.area.max.x = f32::min(orthographic_projection.area.max.x, 160.0);
                     if let ScalingMode::Fixed { width, height } = orthographic_projection.scaling_mode {
-                        orthographic_projection.scaling_mode = ScalingMode::Fixed { 
-                            width: f32::min(width, 320.0), 
-                            height: f32::min(height, 180.0) 
-                        }
+                        camera_transform.translation.x = f32::min(player_translation.x, level_transform.translation.x + level.px_wid as f32 - width / 2.0);
+                        camera_transform.translation.x = f32::max(camera_transform.translation.x, level_transform.translation.x + width / 2.0);
+                        camera_transform.translation.y = f32::min(player_translation.y, level_transform.translation.y + level.px_hei as f32 - height / 2.0);
+                        camera_transform.translation.y = f32::max(camera_transform.translation.y, level_transform.translation.y + height / 2.0);
                     }
-
-                    // orthographic_projection.scaling_mode = bevy::render::camera::ScalingMode::Fixed {
-                    //     width: orthographic_projection.area.max.x - orthographic_projection.area.min.x,
-                    //     height: orthographic_projection.area.max.y - orthographic_projection.area.min.y,
-                    // };
-                    
-                    camera_transform.translation.x = f32::min(player_translation.x, level_transform.translation.x + level.px_wid as f32 - orthographic_projection.area.max.x);
-                    camera_transform.translation.x = f32::max(camera_transform.translation.x, level_transform.translation.x + orthographic_projection.area.max.x);
-                    camera_transform.translation.y = f32::min(player_translation.y, level_transform.translation.y + level.px_hei as f32 - orthographic_projection.area.max.y);
-                    camera_transform.translation.y = f32::max(camera_transform.translation.y, level_transform.translation.y + orthographic_projection.area.max.y);
                 }
             }
         }
