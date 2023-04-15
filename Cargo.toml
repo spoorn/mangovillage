@@ -12,7 +12,7 @@ bevy_ecs_ldtk = "0.6"
 # Bug in bevy_ecs_tilemap where background is blended with white tiles: https://github.com/Trouv/bevy_ecs_ldtk/issues/65
 bevy_ecs_tilemap = "0.10.0"
 bevy_embedded_assets = "0.7"
-bevy_rapier2d = "0.21.0"
+bevy_rapier2d = { version = "0.21.0", features = [ "debug-render-2d" ] }
 bevy_render = "0.10"
 durian = { path = "../durian/durian" }
 rand = "0.8.5"

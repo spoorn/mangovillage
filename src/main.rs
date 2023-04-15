@@ -90,6 +90,7 @@ fn main() {
                     .add_plugin(player::PlayerCommonPlugin)
                     .add_plugin(world::server::LdtkServerPlugin)
                     .add_plugin(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
+                    .add_plugin(debug::server::DebugServerPlugin)
                     .run();
             }
         };
