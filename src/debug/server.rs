@@ -1,6 +1,7 @@
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::{App, Camera2dBundle, Commands, EventReader, Input, MouseButton, Plugin, Query, Res, Transform, With, Without};
 use bevy_render::prelude::{Camera, OrthographicProjection};
+use crate::debug::{cursor_pos_system, init_cursor_pos_system};
 use crate::player::components::ServerPlayer;
 
 const ZOOM_SPEED: f32 = 0.05;
@@ -10,6 +11,8 @@ pub struct DebugServerPlugin;
 impl Plugin for DebugServerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup_camera)
+            .add_startup_system(init_cursor_pos_system)
+            .add_system(cursor_pos_system)
             .add_system(zooming)
             .add_system(scanning);
     }
