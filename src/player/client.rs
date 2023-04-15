@@ -41,6 +41,7 @@ fn movement_input(keys: Res<Input<KeyCode>>, mut manager: ResMut<ClientPacketMan
     }
 }
 
+// Player position is a local position with respect to the Map
 fn update_players(mut commands: Commands, mut players_query: Query<(&ClientPlayer, &mut Position, Entity)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
     let update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
     if let Some(update_players) = update_players {
@@ -59,11 +60,11 @@ fn update_players(mut commands: Commands, mut players_query: Query<(&ClientPlaye
             for player in last.positions.iter() {
                 server_players.insert(player.id);
                 if let Some((p, _entity)) = players.get_mut(&player.id) {
-                    p.x = player.position.0;
-                    p.y = player.position.1;
+                    p.x = player.local_pos.0;
+                    p.y = player.local_pos.1;
                 } else {
                     // New player
-                    spawn_player(&mut commands, &asset_server, player.id, player.position, player.id == client_id.id);
+                    spawn_player(&mut commands, &asset_server, player.id, player.local_pos, player.id == client_id.id);
                 }
             }
             
@@ -87,7 +88,7 @@ pub fn spawn_player(commands: &mut Commands, asset_server: &Res<AssetServer>, id
                 custom_size: Some(Vec2::splat(12.0)),
                 ..default()
             },
-            transform: Transform::from_xyz(0.0, 0.0, 10.0),
+            transform: Transform::from_xyz(position.0, position.1, 10.0),
             texture: asset_server.load("icon/test.png"),
             ..default()
         });

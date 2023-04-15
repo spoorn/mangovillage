@@ -1,4 +1,4 @@
-/// LDTK Level coordinates to our Map coordinates, AKA Transform
+/// LDTK Level coordinates to our Map coordinates
 pub fn ldtk_to_map_coordinates(grid_size: i32, ldtk_coords: (i32, i32), level_height: i32) -> (f32, f32) {
     // ldtk x-coordinate is the same as our Map coordinates, 0 is left side
     // ldtk y-coordinate is flipped, starting with 0 from the top, while our Map starts with 0 at the bottom

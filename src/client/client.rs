@@ -82,6 +82,7 @@ fn get_client_id(mut commands: Commands, mut manager: ResMut<ClientPacketManager
     }
 }
 
+// TODO: When changing level, it can flicker the previous positions for a few frames.  Fix to be smoother transition.
 fn on_app_exit(mut manager: ResMut<ClientPacketManager>, exit: EventReader<AppExit>, close_window: EventReader<WindowCloseRequested>) {
     if !exit.is_empty() || !close_window.is_empty() {
         info!("[client] Exiting game");

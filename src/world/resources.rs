@@ -9,6 +9,7 @@ pub struct World {
     pub maps: HashMap<String, Map>
 }
 
+// All parameters are in world space unless specified otherwise
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Map {
     // x1, x2, y1, y2 bounds, post Transform
@@ -17,8 +18,10 @@ pub struct Map {
     pub neighbors: Vec<(String, String)>,
     // Player spawn position
     pub player_spawn: Position,
-    // (Portal [x1, x2, y1, y2] ranges, destination Level iid)
-    pub portals: Vec<PortalInfo>
+    // (Portal [x1, x2, y1, y2] ranges, destination Level iid), local coordinates
+    pub portals: Vec<PortalInfo>,
+    // WorldX, World Y
+    pub world_coords: (f32, f32)
 }
 
 // (Portal [x1, x2, y1, y2] ranges, destination Level iid, link ID)

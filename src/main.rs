@@ -10,6 +10,7 @@ use bevy::sprite::SpritePlugin;
 use bevy::window::{WindowResolution};
 use bevy::winit::{UpdateMode, winit_runner, WinitPlugin, WinitSettings, WinitWindows};
 use bevy_embedded_assets::EmbeddedAssetPlugin;
+use bevy_rapier2d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use bevy_render::RenderPlugin;
 
 mod networking;
@@ -78,6 +79,11 @@ fn main() {
                         return_from_run: true,
                         focused_mode: UpdateMode::Continuous,
                         unfocused_mode: UpdateMode::Continuous
+                    })
+                    .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+                    .insert_resource(RapierConfiguration {
+                        gravity: Vec2::ZERO,
+                        ..default()
                     })
                     .add_plugin(server::server::ServerPlugin { server_addr: server_addr.clone() })
                     .add_plugin(player::server::PlayerServerPlugin)

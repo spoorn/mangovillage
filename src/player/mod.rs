@@ -1,9 +1,11 @@
 use bevy::app::App;
 use bevy::prelude::{info, Plugin, Query, Res, Time, Transform, Vec3, With};
+use bevy_rapier2d::math::Vect;
+use bevy_rapier2d::prelude::Velocity;
 
 use crate::common::components::Position;
 use crate::common::Direction;
-use crate::player::components::ClientPlayer;
+use crate::player::components::{ClientPlayer, ServerPlayer};
 use crate::world::resources::{Map, PortalInfo, World};
 
 pub mod client;
@@ -36,75 +38,88 @@ const PLAYER_MOVE_SPEED: f32 = 100.0;
 /// 
 /// Note: The portal checking logic assumes no 2 portals are right next to each other or overlaid
 /// TODO: Optimize portal checking logic
-fn handle_move(time: &Res<Time>, direction: Direction, position: &mut Position, current_map: &String, world: &Res<World>) -> Option<String> {
-    let movement = PLAYER_MOVE_SPEED * time.delta_seconds();
+fn handle_move(direction: Direction, player: &mut ServerPlayer, velocity: &mut Velocity, transform: &mut Transform, current_map: &String, world: &Res<World>) -> Option<String> {
+    let movement = PLAYER_MOVE_SPEED; //PLAYER_MOVE_SPEED * time.delta_seconds();
     let map = world.maps.get(current_map).unwrap();
-    let mut was_in_portal = false;
-
+    
+    let x = &mut transform.translation.x;
+    let y = &mut transform.translation.y;
+    
     // Check if player started in a portal
-    for PortalInfo([x1, x2, y1, y2], _destination, _link) in &world.maps.get(current_map).unwrap().portals {
-        if position.x >= *x1 && position.x <= *x2 && position.y >= *y1 && position.y <= *y2 {
-            was_in_portal = true;
-            break;
-        }
-    }
-    
-    match direction {
-        Direction::Left => { 
-            if position.x <= map.bounds[0] {
-                if let Some(neighbor) = find_neighbor("w", map) {
-                    position.x = world.maps.get(&neighbor).unwrap().bounds[1];
-                    return Some(neighbor);
-                }
-            } else {
-                position.x -= movement;
-            }
-        }
-        Direction::Up => {
-            if position.y >= map.bounds[3] {
-                if let Some(neighbor) = find_neighbor("n", map) {
-                    position.y = world.maps.get(&neighbor).unwrap().bounds[2];
-                    return Some(neighbor);
-                }
-            } else {
-                position.y += movement;
-            }
-        }
-        Direction::Right => {
-            if position.x >= map.bounds[1] {
-                if let Some(neighbor) = find_neighbor("e", map) {
-                    position.x = world.maps.get(&neighbor).unwrap().bounds[0];
-                    return Some(neighbor);
-                }
-            } else {
-                position.x += movement;
-            }
-        }
-        Direction::Down => {
-            if position.y <= map.bounds[2] {
-                if let Some(neighbor) = find_neighbor("s", map) {
-                    position.y = world.maps.get(&neighbor).unwrap().bounds[3];
-                    return Some(neighbor);
-                }
-            } else {
-                position.y -= movement;
-            }
-        }
-    }
-    
-    // Portal teleport
-    if !was_in_portal {
-        for PortalInfo([x1, x2, y1, y2], destination, link) in &world.maps.get(current_map).unwrap().portals {
-            if position.x >= *x1 && position.x <= *x2 && position.y >= *y1 && position.y <= *y2 {
-                info!("[server] Player at position={} in Level={} warped to {}", position, current_map, destination);
+    let prev_was_in_portal = player.was_in_portal.clone();
+    let mut in_portal = false;
+    for PortalInfo([x1, x2, y1, y2], destination, link) in &world.maps.get(current_map).unwrap().portals {
+        if *x >= *x1 && *x <= *x2 && *y >= *y1 && *y <= *y2 {
+            in_portal = true;
+            if !prev_was_in_portal {
+                info!("[server] Player at position=({}, {}) in Level={} warped to {}", *x, *y, current_map, destination);
                 for PortalInfo([d_x1, d_x2, d_y1, d_y2], _d_destination, d_link) in &world.maps.get(destination).unwrap().portals {
                     if d_link == link {
                         // TODO: make sure player is grounded
-                        position.x = (d_x1 + d_x2) / 2.0;
-                        position.y = (d_y1 + d_y2) / 2.0;
+                        *x = (d_x1 + d_x2) / 2.0;
+                        *y = (d_y1 + d_y2) / 2.0;
+                        velocity.linvel = Vect::ZERO;
                     }
                 }
+                player.was_in_portal = true;
                 return Some(destination.clone());
+            }
+            break;
+        }
+    }
+    player.was_in_portal = in_portal;
+    
+    match direction {
+        Direction::Left => { 
+            if *x <= map.bounds[0] {
+                if let Some(neighbor) = find_neighbor("w", map) {
+                    *x = world.maps.get(&neighbor).unwrap().bounds[1];
+                    velocity.linvel = Vect::ZERO;
+                    return Some(neighbor);
+                } else {
+                    *x = map.bounds[0];
+                }
+            } else {
+                velocity.linvel.x = -movement;
+            }
+        }
+        Direction::Up => {
+            if *y >= map.bounds[3] {
+                if let Some(neighbor) = find_neighbor("n", map) {
+                    *y = world.maps.get(&neighbor).unwrap().bounds[2];
+                    velocity.linvel = Vect::ZERO;
+                    return Some(neighbor);
+                } else {
+                    *y = map.bounds[3];
+                }
+            } else {
+                velocity.linvel.y = movement;
+            }
+        }
+        Direction::Right => {
+            if *x >= map.bounds[1] {
+                if let Some(neighbor) = find_neighbor("e", map) {
+                    *x = world.maps.get(&neighbor).unwrap().bounds[0];
+                    velocity.linvel = Vect::ZERO;
+                    return Some(neighbor);
+                } else {
+                    *x = map.bounds[1];
+                }
+            } else {
+                velocity.linvel.x = movement;
+            }
+        }
+        Direction::Down => {
+            if *y <= map.bounds[2] {
+                if let Some(neighbor) = find_neighbor("s", map) {
+                    *y = world.maps.get(&neighbor).unwrap().bounds[3];
+                    velocity.linvel = Vect::ZERO;
+                    return Some(neighbor);
+                } else {
+                    *y = map.bounds[2];
+                }
+            } else {
+                velocity.linvel.y = -movement;
             }
         }
     }

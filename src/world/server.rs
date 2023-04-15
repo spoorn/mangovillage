@@ -44,12 +44,13 @@ fn cache_world(mut commands: Commands, level_query: Query<(&Transform, &Handle<L
     if let Some(ldtk_asset) = ldtk_assets.get(ldtk_asset_handle) {
         for (iid, level_handle) in &ldtk_asset.level_map {
             let level = &ldtk_levels.get(&level_handle).unwrap().level;
-            let base_x = level_transform.translation.x;
-            let base_y = level_transform.translation.y;
+            let base_x = level_transform.translation.x + level.world_x as f32;
+            let base_y = level_transform.translation.y + level.world_y as f32;
             assert!(level.neighbours.len() < 5, "Level {} has more than 4 neighbors", level.iid);
             world.maps.insert(iid.clone(), Map {
                 bounds: [base_x, base_x + level.px_wid as f32, base_y, base_y + level.px_hei as f32],
                 neighbors: level.neighbours.iter().map(|neighbor| (neighbor.dir.clone(), neighbor.level_iid.clone())).collect(),
+                world_coords: (level.world_x as f32, level.world_y as f32),
                 ..default()
             });
         }
@@ -72,10 +73,11 @@ fn load_entities(player_spawns_query: Query<(&Transform, &Parent), With<PlayerSp
     info!("[server] Loading Entities...");
     let mut done = false;
 
+    // TODO: Does this need to be transformed into our coordinates like for portals?
     for (transform, parent) in &player_spawns_query {
         let level_handle = level_query.get(parent.get()).unwrap();
         let level = ldtk_levels.get(level_handle).unwrap();
-        world.maps.get_mut(&level.level.iid).unwrap().player_spawn = Position::new(transform.translation.x, transform.translation.y);
+        world.maps.get_mut(&level.level.iid).unwrap().player_spawn = Position::new(transform.translation.x + level.level.world_x as f32, transform.translation.y + level.level.world_y as f32);
         done = true;  // Found player spawns
     }
     
@@ -87,14 +89,17 @@ fn load_entities(player_spawns_query: Query<(&Transform, &Parent), With<PlayerSp
         return;
     }
     
-    for (transform, parent, portal) in &portal_query {
+    for (_transform, parent, portal) in &portal_query {
         let level_handle = level_query.get(parent.get()).unwrap();
         let level = ldtk_levels.get(level_handle).unwrap();
         let destination = portal.destination.clone();
         assert!(world.maps.contains_key(&destination), "[server] Portal destination={} in Level={} does not exist!", destination, level.level.iid);
         // Transform for entities is the center of the entity, so we need width/height to get the [x1, x2, y1, y2] bounds
-        let map_coords = util::ldtk_to_map_coordinates(GRID_SIZE, portal.ldtk_coords, level.level.px_hei);
-        println!("{:?}", transform);
+        let mut map_coords = util::ldtk_to_map_coordinates(GRID_SIZE, portal.ldtk_coords, level.level.px_hei);
+        // Transform to world space
+        map_coords.0 += level.level.world_x as f32;
+        map_coords.1 += level.level.world_y as f32;
+        //println!("{}, {}", transform.translation.x + level.level.world_x as f32, transform.translation.y + level.level.world_y as f32);
         world.maps.get_mut(&level.level.iid).unwrap().portals.push(PortalInfo([map_coords.0, map_coords.0 + portal.width, map_coords.1 - portal.height, map_coords.1], portal.destination.clone(), portal.link));
         done = true;
     }

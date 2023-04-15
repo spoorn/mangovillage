@@ -19,7 +19,7 @@ pub struct UpdatePlayerPositions {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct PlayerPosition {
     pub id: u32,
-    pub position: (f32, f32)
+    pub local_pos: (f32, f32)
 }
 
 #[bincode_packet]
