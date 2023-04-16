@@ -5,5 +5,7 @@ pub enum ServerState {
     #[default]
     LoadWorld,
     LoadEntities,
+    LoadWalls,
+    LoadedWorld,
     Running
 }

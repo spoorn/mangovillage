@@ -1,6 +1,7 @@
 use bevy::prelude::{Bundle, Component};
-use bevy_ecs_ldtk::{EntityInstance, LdtkEntity};
+use bevy_ecs_ldtk::{EntityInstance, IntGridCell, LdtkEntity, LdtkIntCell};
 use bevy_ecs_ldtk::prelude::FieldValue;
+use crate::common::components::ColliderBundle;
 
 #[derive(Component)]
 pub struct WorldComponent {
@@ -8,7 +9,6 @@ pub struct WorldComponent {
 }
 
 // Player Spawn portal entities
-// TODO: Fix coordinates
 #[derive(Component, Default)]
 pub struct PlayerSpawn;
 
@@ -60,4 +60,12 @@ impl From<&EntityInstance> for Portal {
 pub struct PortalBundle {
     #[from_entity_instance]
     pub portal: Portal
+}
+
+#[derive(Component, Default)]
+pub struct Wall;
+
+#[derive(Bundle, LdtkIntCell)]
+pub struct WallBundle {
+    pub wall: Wall
 }

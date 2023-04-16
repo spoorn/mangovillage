@@ -1,12 +1,14 @@
 use bevy::app::App;
 use bevy::prelude::*;
-use bevy_ecs_ldtk::{LdtkAsset, LdtkLevel, LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSet, LevelSpawnBehavior};
-use bevy_ecs_ldtk::prelude::{LdtkEntityAppExt};
+use bevy_ecs_ldtk::{IntGridCell, LayerMetadata, LdtkAsset, LdtkLevel, LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSet, LevelSpawnBehavior};
+use bevy_ecs_ldtk::prelude::{LdtkEntityAppExt, LdtkIntCellAppExt};
+use bevy_rapier2d::dynamics::RigidBody;
+use bevy_rapier2d::prelude::{CoefficientCombineRule, Collider, Friction, LockedAxes, RapierDebugRenderPlugin};
 
-use crate::common::components::Position;
+use crate::common::components::{ColliderBundle, Position};
 use crate::state::server::ServerState;
 use crate::world::{GRID_SIZE, LEVEL_IIDS, util};
-use crate::world::components::{PlayerSpawn, PlayerSpawnBundle, Portal, PortalBundle};
+use crate::world::components::{PlayerSpawn, PlayerSpawnBundle, Portal, PortalBundle, Wall, WallBundle};
 use crate::world::resources::{Map, PortalInfo, World};
 
 pub struct LdtkServerPlugin;
@@ -14,6 +16,8 @@ impl Plugin for LdtkServerPlugin {
     
     fn build(&self, app: &mut App) {
         app.add_plugin(LdtkPlugin)
+            .add_plugin(RapierDebugRenderPlugin::default())
+            .register_ldtk_int_cell::<WallBundle>(1)
             .register_ldtk_entity::<PlayerSpawnBundle>("PlayerSpawn")
             .register_ldtk_entity::<PortalBundle>("Portal")
             .add_state::<ServerState>()
@@ -25,7 +29,9 @@ impl Plugin for LdtkServerPlugin {
             })
             .add_startup_system(load_level)
             .add_system(cache_world.in_set(OnUpdate(ServerState::LoadWorld)))
-            .add_system(load_entities.in_set(OnUpdate(ServerState::LoadEntities)));
+            .add_system(load_entities.in_set(OnUpdate(ServerState::LoadEntities)))
+            .add_system(spawn_wall_colliders.in_set(OnUpdate(ServerState::LoadWalls)))
+            .add_system(loaded_world.in_set(OnUpdate(ServerState::LoadedWorld)));
     }
 }
 
@@ -45,12 +51,13 @@ fn cache_world(mut commands: Commands, level_query: Query<(&Transform, &Handle<L
         for (iid, level_handle) in &ldtk_asset.level_map {
             let level = &ldtk_levels.get(&level_handle).unwrap().level;
             let base_x = level_transform.translation.x + level.world_x as f32;
-            let base_y = level_transform.translation.y + level.world_y as f32;
+            // Note: flip the Y value as bevy increases in Y as we go up while LDTK decreases
+            let base_y = level_transform.translation.y - level.world_y as f32;
             assert!(level.neighbours.len() < 5, "Level {} has more than 4 neighbors", level.iid);
             world.maps.insert(iid.clone(), Map {
                 bounds: [base_x, base_x + level.px_wid as f32, base_y, base_y + level.px_hei as f32],
                 neighbors: level.neighbours.iter().map(|neighbor| (neighbor.dir.clone(), neighbor.level_iid.clone())).collect(),
-                world_coords: (level.world_x as f32, level.world_y as f32),
+                world_coords: (level.world_x as f32, -level.world_y as f32),
                 ..default()
             });
         }
@@ -77,7 +84,8 @@ fn load_entities(player_spawns_query: Query<(&Transform, &Parent), With<PlayerSp
     for (transform, parent) in &player_spawns_query {
         let level_handle = level_query.get(parent.get()).unwrap();
         let level = ldtk_levels.get(level_handle).unwrap();
-        world.maps.get_mut(&level.level.iid).unwrap().player_spawn = Position::new(transform.translation.x + level.level.world_x as f32, transform.translation.y + level.level.world_y as f32);
+        // Note: flip the Y value as bevy increases in Y as we go up while LDTK decreases
+        world.maps.get_mut(&level.level.iid).unwrap().player_spawn = Position::new(transform.translation.x + level.level.world_x as f32, transform.translation.y - level.level.world_y as f32);
         done = true;  // Found player spawns
     }
     
@@ -98,7 +106,8 @@ fn load_entities(player_spawns_query: Query<(&Transform, &Parent), With<PlayerSp
         let mut map_coords = util::ldtk_to_map_coordinates(GRID_SIZE, portal.ldtk_coords, level.level.px_hei);
         // Transform to world space
         map_coords.0 += level.level.world_x as f32;
-        map_coords.1 += level.level.world_y as f32;
+        // Note: flip the Y value as bevy increases in Y as we go up while LDTK decreases
+        map_coords.1 -= level.level.world_y as f32;
         //println!("{}, {}", transform.translation.x + level.level.world_x as f32, transform.translation.y + level.level.world_y as f32);
         world.maps.get_mut(&level.level.iid).unwrap().portals.push(PortalInfo([map_coords.0, map_coords.0 + portal.width, map_coords.1 - portal.height, map_coords.1], portal.destination.clone(), portal.link));
         done = true;
@@ -112,8 +121,38 @@ fn load_entities(player_spawns_query: Query<(&Transform, &Parent), With<PlayerSp
     }
     
     if done {
-        info!("[server] Finished loading world: {:#?}", world);
-        server_state.set(ServerState::Running);
+        info!("[server] Finished loading Entities");
+        server_state.set(ServerState::LoadWalls);
     }
 }
 
+fn spawn_wall_colliders(mut commands: Commands, wall_query: Query<(&Transform, &Wall, &Parent, Entity), Without<Collider>>, layer_metadata_query: Query<&LayerMetadata>, mut server_state: ResMut<NextState<ServerState>>) {
+    info!("[server] Loading Walls...");
+    let mut done = false;
+    
+    for (transform, _wall, parent, entity) in &wall_query {
+        // Get IntGrid Layer's metadata for grid size
+        let layer_metadata = layer_metadata_query.get(parent.get()).unwrap();
+        // Insert colliders for wall
+        commands.entity(entity)
+            .insert(ColliderBundle {
+                collider: Collider::cuboid(layer_metadata.grid_size as f32 / 2.0, layer_metadata.grid_size as f32 / 2.0),
+                rigid_body: RigidBody::Fixed,
+                friction: Friction::new(1.0),
+                rotation_constraints: LockedAxes::ROTATION_LOCKED,
+                ..default()
+            });
+        info!("inserted wall collider {:?}", transform);
+        done = true;
+    }
+
+    if done {
+        info!("[server] Finished loading walls");
+        server_state.set(ServerState::LoadedWorld);
+    }
+}
+
+fn loaded_world(world: Res<World>, mut server_state: ResMut<NextState<ServerState>>) {
+    info!("[server] Finished loading world: {:#?}", world);
+    server_state.set(ServerState::Running);
+}
