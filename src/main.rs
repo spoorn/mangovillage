@@ -1,17 +1,12 @@
 use std::{env, thread};
 
 use bevy::app::App;
-use bevy::core_pipeline::core_2d::Core2dPlugin;
-use bevy::core_pipeline::CorePipelinePlugin;
-use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
-use bevy::sprite::SpritePlugin;
-use bevy::window::{WindowResolution};
-use bevy::winit::{UpdateMode, winit_runner, WinitPlugin, WinitSettings, WinitWindows};
+use bevy::window::WindowResolution;
+use bevy::winit::{UpdateMode, WinitSettings};
 use bevy_embedded_assets::EmbeddedAssetPlugin;
-use bevy_rapier2d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
-use bevy_render::RenderPlugin;
+use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 
 mod networking;
 mod client;
@@ -70,7 +65,7 @@ fn main() {
                         // .add(HierarchyPlugin::default())
                         // .add(DiagnosticsPlugin::default())
                         .set( LogPlugin {
-                            filter: "info,durian=info,wgpu=error".to_string(),
+                            filter: "info,mangovillage=debug,durian=info,wgpu=error".to_string(),
                             level: Level::INFO
                         })
                     )
@@ -80,9 +75,9 @@ fn main() {
                         focused_mode: UpdateMode::Continuous,
                         unfocused_mode: UpdateMode::Continuous
                     })
-                    .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+                    .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
                     .insert_resource(RapierConfiguration {
-                        gravity: Vec2::ZERO,
+                        gravity: Vec3::ZERO,
                         ..default()
                     })
                     .add_plugin(server::server::ServerPlugin { server_addr: server_addr.clone() })
@@ -109,7 +104,7 @@ fn main() {
             DefaultPlugins.build().disable::<LogPlugin>()
         } else {
             DefaultPlugins.build().set(LogPlugin {
-                filter: "info,durian=info,wgpu=error".to_string(),
+                filter: "info,mangovillage=debug,durian=info,wgpu=error".to_string(),
                 level: Level::INFO
             })
         };

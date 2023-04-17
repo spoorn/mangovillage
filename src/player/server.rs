@@ -1,7 +1,7 @@
 use bevy::app::App;
 use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
-use bevy_rapier2d::prelude::*;
+use bevy_rapier3d::prelude::*;
 use rand::Rng;
 
 use crate::common::components::{ColliderBundle, Position};
@@ -24,7 +24,7 @@ impl Plugin for PlayerServerPlugin {
 }
 
 /// Adds new players to player pool
-fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPlayer, &mut Position, Entity)>, mut manager: ResMut<ServerPacketManager>, world: Res<World>) {
+fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPlayer, &mut Position, Entity)>, mut manager: ResMut<ServerPacketManager>, world: Res<World>, asset_server: Res<AssetServer>) {
     let clients = manager.get_client_connections();
     let client_ids: HashSet<&u32> = clients.iter().map(|(_addr, id)| id).collect();
 
@@ -52,7 +52,7 @@ fn accept_new_player(mut commands: Commands, mut players_query: Query<(&ServerPl
         let level_iid = LEVEL_IIDS[rand::thread_rng().gen_range(0..LEVEL_IIDS.len())].to_string();
         let world_component = WorldComponent { level_iid: level_iid.clone() };
         // TODO: Randomize exact pixel placement of player spawn
-        spawn_player(&mut commands, addr.clone(), *id, world.maps.get(&level_iid).unwrap().player_spawn, world_component);
+        spawn_player(&mut commands, addr.clone(), *id, world.maps.get(&level_iid).unwrap().player_spawn, world_component, asset_server.load("models/owl/scene.gltf#Scene0"));
         if let Err(e) = manager.send_to(addr, SpawnAck { id: *id, level_iid }) {
             error!("[server] Failed to send SpawnAck to addr={}.  Error: {}", addr, e);
         }
@@ -107,11 +107,11 @@ fn handle_player_move(mut players_query: Query<(&mut ServerPlayer, &mut Velocity
                     let player_id = manager.get_client_id(addr).unwrap();
                     if let Some((ref mut player, ref mut velocity, ref mut transform, ref mut world_component)) = players.get_mut(&player_id) {
                         if let Some(change_level) = handle_move(last.dir, player, velocity, transform, &world_component.level_iid, &world) {
-                            if let Err(e) = manager.send_to(addr, ChangeLevel { level_iid: change_level.clone() }) {
-                                warn!("[server] Could not send ChangeLevel to addr={}. Error: {}", addr, e);
-                            } else {
-                                world_component.level_iid = change_level;
-                            }
+                            // if let Err(e) = manager.send_to(addr, ChangeLevel { level_iid: change_level.clone() }) {
+                            //     warn!("[server] Could not send ChangeLevel to addr={}. Error: {}", addr, e);
+                            // } else {
+                            //     world_component.level_iid = change_level;
+                            // }
                         }
                     }
                 }
@@ -120,15 +120,21 @@ fn handle_player_move(mut players_query: Query<(&mut ServerPlayer, &mut Velocity
     }
 }
 
-pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: Position, world: WorldComponent) {
+pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: Position, world: WorldComponent, scene: Handle<Scene>) {
     info!("[server] Spawning new player in {} at {}", world.level_iid, position);
+    // TODO: Change to headless
     let mut player_spawn = commands
-        .spawn(TransformBundle::from_transform(Transform::from_xyz(position.x, position.y, 10.0)));
+        //.spawn(TransformBundle::from_transform(Transform::from_xyz(position.x, position.y, 10.0)));
+        .spawn(SceneBundle {
+            scene,
+            transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.05)),
+            ..default()
+        });
     player_spawn
         .insert(ServerPlayerBundle {
             player: ServerPlayer { id, addr, was_in_portal: false },
             collider_bundle: ColliderBundle {
-                collider: Collider::cuboid(12.0, 12.0),
+                collider: Collider::cuboid(12.0, 12.0, 12.0),
                 rigid_body: RigidBody::Dynamic,
                 damping: Damping {
                     linear_damping: 100.0,

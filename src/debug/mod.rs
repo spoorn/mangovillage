@@ -9,6 +9,7 @@ use crate::debug::components::MouseCoordinateText;
 pub mod client;
 mod components;
 pub mod server;
+mod resources;
 
 fn init_cursor_pos_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Text with multiple sections

@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use bevy::prelude::{Bundle, Component};
 use bevy_ecs_ldtk::LdtkIntCell;
-use bevy_rapier2d::prelude::*;
+use bevy_rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Transform is world coordinates, LocalPosition is local coordinates on the map an entity is in

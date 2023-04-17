@@ -2,14 +2,14 @@
 
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::pbr::DirectionalLightShadowMap;
-use bevy::prelude::{AmbientLight, App, AssetServer, Camera3dBundle, Commands, default, EventReader, info, Input, Mat3, MouseButton, Plugin, Quat, Query, Res, SceneBundle, Transform, Vec2, Vec3, Window, With, Without};
+use bevy::prelude::{AmbientLight, App, AssetServer, Camera3dBundle, Commands, debug, default, EventReader, info, Input, KeyCode, Mat3, MouseButton, Plugin, Quat, Query, Res, ResMut, SceneBundle, Transform, Vec2, Vec3, Window, With, Without};
 use bevy::window::PrimaryWindow;
 use bevy_render::prelude::{Camera, Color, Projection};
 
 use crate::debug::components::PanOrbitCamera;
+use crate::debug::resources::ZoomSpeed;
 use crate::player::components::ServerPlayer;
 
-const ZOOM_SPEED: f32 = 0.1;
 const PAN_SPEED: f32 = 1.0;
 const ORBIT_SPEED: f32 = 2.0;
 
@@ -21,7 +21,9 @@ impl Plugin for DebugServerPlugin {
             brightness: 1.0 / 5.0f32,
         })
             .insert_resource(DirectionalLightShadowMap { size: 4096 })
+            .insert_resource(ZoomSpeed::default())
             .add_startup_system(setup_camera)
+            .add_system(update_zoom_speed)
             // .add_startup_system(init_cursor_pos_system)
             // .add_system(cursor_pos_system)
             .add_system(zoom)
@@ -31,8 +33,8 @@ impl Plugin for DebugServerPlugin {
 }
 
 fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let camera_translation = Vec3::new(0.7, 0.7, 1.0);
-    let focus = Vec3::new(0.0, 0.3, 0.0);
+    let camera_translation = Vec3::new(0.0, 0.0, 10.0);
+    let focus = Vec3::new(0.0, 0.0, 0.0);
     commands.spawn((
        Camera3dBundle {
             transform: Transform::from_translation(camera_translation)
@@ -46,17 +48,33 @@ fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
         }
     ));
     
-    // Test
+    let mut scene_transform = Transform::from_xyz(0.0, 0.0, -5.0).with_scale(Vec3::splat(0.001));
+    scene_transform.rotate_x(std::f32::consts::PI / 2.0);
     commands.spawn(SceneBundle {
-        scene: asset_server.load("models/FlightHelmet/FlightHelmet.gltf#Scene0"),
+        scene: asset_server.load("models/volcano_island_lowpoly/scene.gltf#Scene0"),
+        transform: scene_transform,
         ..default()
     });
 }
 
-fn zoom(mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), (With<Camera>, Without<ServerPlayer>)>, mut scroll_evr: EventReader<MouseWheel>) {
+fn update_zoom_speed(mut zoom_speed: ResMut<ZoomSpeed>, buttons: Res<Input<KeyCode>>) {
+    let mut changed = false;
+    if buttons.just_pressed(KeyCode::LBracket) {
+        zoom_speed.speed = f32::max(0.01, zoom_speed.speed - 0.5);
+        changed = true;
+    } else if buttons.just_pressed(KeyCode::RBracket) {
+        zoom_speed.speed += 0.5;
+        changed = true;
+    }
+    if changed {
+        debug!("Update zoom speed to {}", zoom_speed.speed);
+    }
+}
+
+fn zoom(mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), (With<Camera>, Without<ServerPlayer>)>, mut scroll_evr: EventReader<MouseWheel>, zoom_speed: Res<ZoomSpeed>) {
     let (mut pan_orbit, mut transform) = camera_query.single_mut();
     
-    let scroll: f32 = scroll_evr.iter().map(|ev| ev.y).sum::<f32>() * ZOOM_SPEED;
+    let scroll: f32 = scroll_evr.iter().map(|ev| ev.y).sum::<f32>() * zoom_speed.speed;
 
     if scroll.abs() > 0.0 {
         pan_orbit.radius -= scroll;
@@ -99,7 +117,7 @@ fn orbit(windows: Query<&Window, With<PrimaryWindow>>, mut camera_query: Query<(
         
         if rotation_move.length_squared() > 0.0 {
             let (pan_orbit, mut transform, projection) = camera_query.single_mut();
-            
+
             let window = get_primary_window_size(&windows);
             // Make rotation speed independent of resolution and fov
             if let Projection::Perspective(projection) = projection {
@@ -115,12 +133,13 @@ fn orbit(windows: Query<&Window, With<PrimaryWindow>>, mut camera_query: Query<(
 
             let delta_y = rotation_move.y; //rotation_move.y / window.y * std::f32::consts::PI;
             // negative to flip direction
-            let yaw = Quat::from_rotation_y(-delta_x);
+            let yaw = Quat::from_rotation_z(-delta_x);  // Top down view where +Z is camera view, so we rotate/spin around Z
             let pitch = Quat::from_rotation_x(-delta_y);
-            // Not sure why this ordering is correct.  Need to better understand quaternion multiplication properties
+            // Rotation matrix rotates the radius vector - right to left
+            // https://forum.unity.com/threads/understanding-rotations-in-local-and-world-space-quaternions.153330/
             transform.rotation = yaw * transform.rotation; // rotate around global y axis
             transform.rotation = transform.rotation * pitch; // rotate around local x axis
-
+            
             update_camera_transform(&mut transform, pan_orbit);
         }
     }
@@ -136,5 +155,7 @@ fn get_primary_window_size(windows: &Query<&Window, With<PrimaryWindow>>) -> Vec
 #[inline]
 fn update_camera_transform(transform: &mut Transform, pan_orbit: &PanOrbitCamera) {
     let rot_matrix = Mat3::from_quat(transform.rotation);
+    // Rotation matrix rotates the radius vector - right to left
+    // https://forum.unity.com/threads/understanding-rotations-in-local-and-world-space-quaternions.153330/
     transform.translation = pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
 }

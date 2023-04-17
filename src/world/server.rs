@@ -1,9 +1,9 @@
 use bevy::app::App;
 use bevy::prelude::*;
-use bevy_ecs_ldtk::{IntGridCell, LayerMetadata, LdtkAsset, LdtkLevel, LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSet, LevelSpawnBehavior};
+use bevy_ecs_ldtk::{LayerMetadata, LdtkAsset, LdtkLevel, LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSet, LevelSpawnBehavior};
 use bevy_ecs_ldtk::prelude::{LdtkEntityAppExt, LdtkIntCellAppExt};
-use bevy_rapier2d::dynamics::RigidBody;
-use bevy_rapier2d::prelude::{CoefficientCombineRule, Collider, Friction, LockedAxes, RapierDebugRenderPlugin};
+use bevy_rapier3d::dynamics::RigidBody;
+use bevy_rapier3d::prelude::{Collider, Friction, LockedAxes, RapierDebugRenderPlugin};
 
 use crate::common::components::{ColliderBundle, Position};
 use crate::state::server::ServerState;
@@ -30,7 +30,7 @@ impl Plugin for LdtkServerPlugin {
             .add_startup_system(load_level)
             .add_system(cache_world.in_set(OnUpdate(ServerState::LoadWorld)))
             .add_system(load_entities.in_set(OnUpdate(ServerState::LoadEntities)))
-            .add_system(spawn_wall_colliders.in_set(OnUpdate(ServerState::LoadWalls)))
+            //.add_system(spawn_wall_colliders.in_set(OnUpdate(ServerState::LoadWalls)))
             .add_system(loaded_world.in_set(OnUpdate(ServerState::LoadedWorld)));
     }
 }
@@ -122,7 +122,7 @@ fn load_entities(player_spawns_query: Query<(&Transform, &Parent), With<PlayerSp
     
     if done {
         info!("[server] Finished loading Entities");
-        server_state.set(ServerState::LoadWalls);
+        server_state.set(ServerState::LoadedWorld);
     }
 }
 
@@ -136,13 +136,12 @@ fn spawn_wall_colliders(mut commands: Commands, wall_query: Query<(&Transform, &
         // Insert colliders for wall
         commands.entity(entity)
             .insert(ColliderBundle {
-                collider: Collider::cuboid(layer_metadata.grid_size as f32 / 2.0, layer_metadata.grid_size as f32 / 2.0),
+                collider: Collider::cuboid(layer_metadata.grid_size as f32 / 2.0, layer_metadata.grid_size as f32 / 2.0, layer_metadata.grid_size as f32 / 2.0),
                 rigid_body: RigidBody::Fixed,
                 friction: Friction::new(1.0),
                 rotation_constraints: LockedAxes::ROTATION_LOCKED,
                 ..default()
             });
-        info!("inserted wall collider {:?}", transform);
         done = true;
     }
 

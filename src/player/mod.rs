@@ -1,7 +1,7 @@
 use bevy::app::App;
 use bevy::prelude::{info, Plugin, Query, Res, Time, Transform, Vec3, With};
-use bevy_rapier2d::math::Vect;
-use bevy_rapier2d::prelude::Velocity;
+use bevy_rapier3d::math::Vect;
+use bevy_rapier3d::prelude::Velocity;
 
 use crate::common::components::Position;
 use crate::common::Direction;
@@ -17,20 +17,11 @@ pub struct PlayerCommonPlugin;
 impl Plugin for PlayerCommonPlugin {
     
     fn build(&self, app: &mut App) {
-        app.add_system(transform_positions);
-    }
-}
-
-pub fn transform_positions(mut query: Query<(&Position, &mut Transform), With<ClientPlayer>>) {
-    for (pos, mut trans) in query.iter_mut() {
-        if pos.x != trans.translation.x || pos.y != trans.translation.y {  // Avoid new instantiations if possible
-            trans.translation = Vec3::new(pos.x, pos.y, trans.translation.z);
-        }
     }
 }
 
 // Per second
-const PLAYER_MOVE_SPEED: f32 = 100.0;
+const PLAYER_MOVE_SPEED: f32 = 1.0;
 
 /// Handle an entity's movement
 /// 
@@ -42,8 +33,10 @@ fn handle_move(direction: Direction, player: &mut ServerPlayer, velocity: &mut V
     let movement = PLAYER_MOVE_SPEED; //PLAYER_MOVE_SPEED * time.delta_seconds();
     let map = world.maps.get(current_map).unwrap();
     
-    let x = &mut transform.translation.x;
-    let y = &mut transform.translation.y;
+    // let x = &mut transform.translation.x;
+    // let y = &mut transform.translation.y;
+    let x = &mut transform.translation.clone().x;
+    let y = &mut transform.translation.clone().y;
     
     // Check if player started in a portal
     let prev_was_in_portal = player.was_in_portal.clone();
@@ -71,56 +64,60 @@ fn handle_move(direction: Direction, player: &mut ServerPlayer, velocity: &mut V
     
     match direction {
         Direction::Left => { 
-            if *x <= map.bounds[0] {
-                if let Some(neighbor) = find_neighbor("w", map) {
-                    *x = world.maps.get(&neighbor).unwrap().bounds[1];
-                    velocity.linvel = Vect::ZERO;
-                    return Some(neighbor);
-                } else {
-                    *x = map.bounds[0];
-                }
-            } else {
-                velocity.linvel.x = -movement;
-            }
+            // if *x <= map.bounds[0] {
+            //     if let Some(neighbor) = find_neighbor("w", map) {
+            //         *x = world.maps.get(&neighbor).unwrap().bounds[1];
+            //         velocity.linvel = Vect::ZERO;
+            //         return Some(neighbor);
+            //     } else {
+            //         *x = map.bounds[0];
+            //     }
+            // } else {
+            //     velocity.linvel.x = -movement;
+            // }
+            velocity.linvel.x = -movement;
         }
         Direction::Up => {
-            if *y >= map.bounds[3] {
-                if let Some(neighbor) = find_neighbor("n", map) {
-                    *y = world.maps.get(&neighbor).unwrap().bounds[2];
-                    velocity.linvel = Vect::ZERO;
-                    return Some(neighbor);
-                } else {
-                    *y = map.bounds[3];
-                }
-            } else {
-                velocity.linvel.y = movement;
-            }
+            // if *y >= map.bounds[3] {
+            //     if let Some(neighbor) = find_neighbor("n", map) {
+            //         *y = world.maps.get(&neighbor).unwrap().bounds[2];
+            //         velocity.linvel = Vect::ZERO;
+            //         return Some(neighbor);
+            //     } else {
+            //         *y = map.bounds[3];
+            //     }
+            // } else {
+            //     velocity.linvel.y = movement;
+            // }
+            velocity.linvel.y = movement;
         }
         Direction::Right => {
-            if *x >= map.bounds[1] {
-                if let Some(neighbor) = find_neighbor("e", map) {
-                    *x = world.maps.get(&neighbor).unwrap().bounds[0];
-                    velocity.linvel = Vect::ZERO;
-                    return Some(neighbor);
-                } else {
-                    *x = map.bounds[1];
-                }
-            } else {
-                velocity.linvel.x = movement;
-            }
+            // if *x >= map.bounds[1] {
+            //     if let Some(neighbor) = find_neighbor("e", map) {
+            //         *x = world.maps.get(&neighbor).unwrap().bounds[0];
+            //         velocity.linvel = Vect::ZERO;
+            //         return Some(neighbor);
+            //     } else {
+            //         *x = map.bounds[1];
+            //     }
+            // } else {
+            //     velocity.linvel.x = movement;
+            // }
+            velocity.linvel.x = movement;
         }
         Direction::Down => {
-            if *y <= map.bounds[2] {
-                if let Some(neighbor) = find_neighbor("s", map) {
-                    *y = world.maps.get(&neighbor).unwrap().bounds[3];
-                    velocity.linvel = Vect::ZERO;
-                    return Some(neighbor);
-                } else {
-                    *y = map.bounds[2];
-                }
-            } else {
-                velocity.linvel.y = -movement;
-            }
+            // if *y <= map.bounds[2] {
+            //     if let Some(neighbor) = find_neighbor("s", map) {
+            //         *y = world.maps.get(&neighbor).unwrap().bounds[3];
+            //         velocity.linvel = Vect::ZERO;
+            //         return Some(neighbor);
+            //     } else {
+            //         *y = map.bounds[2];
+            //     }
+            // } else {
+            //     velocity.linvel.y = -movement;
+            // }
+            velocity.linvel.y = -movement;
         }
     }
     
