@@ -33,7 +33,7 @@ impl Plugin for DebugServerPlugin {
 }
 
 fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let camera_translation = Vec3::new(0.0, 0.0, 10.0);
+    let camera_translation = Vec3::new(0.0, 0.0, 20.0);
     let focus = Vec3::new(0.0, 0.0, 0.0);
     commands.spawn((
        Camera3dBundle {
@@ -48,7 +48,7 @@ fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
         }
     ));
     
-    let mut scene_transform = Transform::from_xyz(0.0, 0.0, -5.0).with_scale(Vec3::splat(0.001));
+    let mut scene_transform = Transform::from_xyz(0.0, 0.0, 10.0).with_scale(Vec3::splat(0.001));
     scene_transform.rotate_x(std::f32::consts::PI / 2.0);
     commands.spawn(SceneBundle {
         scene: asset_server.load("models/volcano_island_lowpoly/scene.gltf#Scene0"),

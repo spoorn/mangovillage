@@ -127,7 +127,7 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: Po
         //.spawn(TransformBundle::from_transform(Transform::from_xyz(position.x, position.y, 10.0)));
         .spawn(SceneBundle {
             scene,
-            transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.05)),
+            transform: Transform::from_xyz(0.0, 0.0, 15.0).with_scale(Vec3::splat(0.05)),
             ..default()
         });
     player_spawn
@@ -136,17 +136,21 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: Po
             collider_bundle: ColliderBundle {
                 collider: Collider::cuboid(12.0, 12.0, 12.0),
                 rigid_body: RigidBody::Dynamic,
-                damping: Damping {
-                    linear_damping: 100.0,
-                    angular_damping: 0.0
-                },
-                friction: Friction {
-                    coefficient: 0.0,
-                    combine_rule: CoefficientCombineRule::Min,
-                },
-                rotation_constraints: LockedAxes::ROTATION_LOCKED,
+                // damping: Damping {
+                //     linear_damping: 0.0,
+                //     angular_damping: 0.0
+                // },
+                // friction: Friction {
+                //     coefficient: 0.0,
+                //     combine_rule: CoefficientCombineRule::Min,
+                // },
+                //rotation_constraints: LockedAxes::ROTATION_LOCKED,
                 ..default()
             }
+        })
+        .insert(Sleeping {
+            linear_threshold: 0.05,
+            ..default()
         })
         .insert(position)
         .insert(world);

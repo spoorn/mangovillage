@@ -16,7 +16,7 @@ impl Plugin for LdtkServerPlugin {
     
     fn build(&self, app: &mut App) {
         app.add_plugin(LdtkPlugin)
-            .add_plugin(RapierDebugRenderPlugin::default())
+            .add_plugin(RapierDebugRenderPlugin::default().always_on_top())
             .register_ldtk_int_cell::<WallBundle>(1)
             .register_ldtk_entity::<PlayerSpawnBundle>("PlayerSpawn")
             .register_ldtk_entity::<PortalBundle>("Portal")

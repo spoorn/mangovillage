@@ -77,7 +77,7 @@ fn main() {
                     })
                     .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
                     .insert_resource(RapierConfiguration {
-                        gravity: Vec3::ZERO,
+                        gravity: Vec3::new(0.0, 0.0, -0.1),
                         ..default()
                     })
                     .add_plugin(server::server::ServerPlugin { server_addr: server_addr.clone() })
