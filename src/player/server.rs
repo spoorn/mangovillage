@@ -144,7 +144,7 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, position: Po
                 //     coefficient: 0.0,
                 //     combine_rule: CoefficientCombineRule::Min,
                 // },
-                //rotation_constraints: LockedAxes::ROTATION_LOCKED,
+                rotation_constraints: LockedAxes::ROTATION_LOCKED,
                 ..default()
             }
         })

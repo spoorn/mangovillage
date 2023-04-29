@@ -2,7 +2,7 @@
 
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::pbr::DirectionalLightShadowMap;
-use bevy::prelude::{AmbientLight, App, AssetServer, Camera3dBundle, Commands, debug, default, EventReader, info, Input, KeyCode, Mat3, MouseButton, Plugin, Quat, Query, Res, ResMut, SceneBundle, Transform, Vec2, Vec3, Window, With, Without};
+use bevy::prelude::{AmbientLight, App, AssetServer, Camera3dBundle, Commands, debug, default, EventReader, Input, KeyCode, Mat3, MouseButton, Plugin, Quat, Query, Res, ResMut, Transform, Vec2, Vec3, Window, With, Without};
 use bevy::window::PrimaryWindow;
 use bevy_render::prelude::{Camera, Color, Projection};
 
@@ -50,11 +50,11 @@ fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
     
     let mut scene_transform = Transform::from_xyz(0.0, 0.0, 10.0).with_scale(Vec3::splat(0.001));
     scene_transform.rotate_x(std::f32::consts::PI / 2.0);
-    commands.spawn(SceneBundle {
-        scene: asset_server.load("models/volcano_island_lowpoly/scene.gltf#Scene0"),
-        transform: scene_transform,
-        ..default()
-    });
+    // commands.spawn(SceneBundle {
+    //     scene: asset_server.load("models/volcano_island_lowpoly/scene.gltf#Scene0"),
+    //     transform: scene_transform,
+    //     ..default()
+    // });
 }
 
 fn update_zoom_speed(mut zoom_speed: ResMut<ZoomSpeed>, buttons: Res<Input<KeyCode>>) {

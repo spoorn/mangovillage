@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy_ecs_ldtk::{LayerMetadata, LdtkAsset, LdtkLevel, LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSet, LevelSpawnBehavior};
 use bevy_ecs_ldtk::prelude::{LdtkEntityAppExt, LdtkIntCellAppExt};
 use bevy_rapier3d::dynamics::RigidBody;
+use bevy_rapier3d::geometry::ComputedColliderShape;
 use bevy_rapier3d::prelude::{Collider, Friction, LockedAxes, RapierDebugRenderPlugin};
 
 use crate::common::components::{ColliderBundle, Position};
@@ -31,8 +32,54 @@ impl Plugin for LdtkServerPlugin {
             .add_system(cache_world.in_set(OnUpdate(ServerState::LoadWorld)))
             .add_system(load_entities.in_set(OnUpdate(ServerState::LoadEntities)))
             //.add_system(spawn_wall_colliders.in_set(OnUpdate(ServerState::LoadWalls)))
-            .add_system(loaded_world.in_set(OnUpdate(ServerState::LoadedWorld)));
+            .add_system(spawn_scene.in_schedule(OnEnter(ServerState::LoadedWorld)))
+            .add_system(tst.in_set(OnUpdate(ServerState::LoadedWorld)));
+            //.add_system(loaded_world.in_set(OnUpdate(ServerState::LoadedWorld)));
     }
+}
+
+fn spawn_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let mut scene_transform = Transform::from_xyz(0.0, 0.0, 10.0).with_scale(Vec3::splat(0.001));
+    scene_transform.rotate_x(std::f32::consts::PI / 2.0);
+    commands.spawn(SceneBundle {
+        scene: asset_server.load("models/volcano_island_lowpoly/scene.gltf#Scene0"),
+        transform: scene_transform,
+        visibility: Visibility::Hidden,
+        ..default()
+    });
+}
+
+fn tst(mut commands: Commands, meshes: Res<Assets<Mesh>>, mesh_query: Query<(Entity, &Handle<Mesh>), Without<Collider>>, asset_server: Res<AssetServer>, mut server_state: ResMut<NextState<ServerState>>) {
+    let mut done = false;
+   // let mesh = meshes.get(&asset_server.load("models/volcano_island_lowpoly/scene.gltf#Mesh0/Primitive0"));
+    for (entity, mesh) in &mesh_query {
+        let collider = Collider::from_bevy_mesh(meshes.get(mesh).unwrap(), &ComputedColliderShape::TriMesh);
+        if let Some(collider) = collider {
+            commands.entity(entity).insert(collider);
+            done = true;
+        }
+    }
+    if done {
+        server_state.set(ServerState::Running);
+    }
+    // if let Some(mesh) = mesh {
+    //     let collider = Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh);
+    //     // let mut scene_transform = Transform::from_xyz(0.0, 0.0, 10.0).with_scale(Vec3::splat(0.001));
+    //     // scene_transform.rotate_x(std::f32::consts::PI / 2.0);
+    //     // commands.spawn(SceneBundle {
+    //     //     scene: asset_server.load("models/volcano_island_lowpoly/scene.gltf#Scene0"),
+    //     //     transform: scene_transform,
+    //     //     visibility: Visibility::Hidden,
+    //     //     ..default()
+    //     // })
+    //     //     .insert(collider.unwrap());
+    //     server_state.set(ServerState::Running);
+    // }
+    // TODO: Make sure only select meshes we want
+    info!("### meshes: {:?}", meshes);
+    // Mesh::search_in_children
+    // let mesh: Handle<Mesh> = asset_server.load("models/volcano_island_lowpoly/scene.gltf#Mesh0/Primitive0");
+    // Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh);
 }
 
 fn load_level(mut commands: Commands, asset_server: Res<AssetServer>) {
