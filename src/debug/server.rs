@@ -2,12 +2,12 @@
 
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::pbr::DirectionalLightShadowMap;
-use bevy::prelude::{AmbientLight, App, AssetServer, Camera3dBundle, Commands, debug, default, EventReader, Input, KeyCode, Mat3, MouseButton, Plugin, Quat, Query, Res, ResMut, Transform, Vec2, Vec3, Window, With, Without};
+use bevy::prelude::{AmbientLight, App, AssetServer, Camera3dBundle, Commands, debug, default, EventReader, Handle, Input, KeyCode, Mat3, MouseButton, Plugin, Quat, Query, Reflect, Res, ResMut, Scene, Transform, Vec2, Vec3, Window, With, Without};
 use bevy::window::PrimaryWindow;
-use bevy_render::prelude::{Camera, Color, Projection};
+use bevy_render::prelude::{Camera, Color, Projection, Visibility};
 
 use crate::debug::components::PanOrbitCamera;
-use crate::debug::resources::ZoomSpeed;
+use crate::debug::resources::{MeshVisibility, ZoomSpeed};
 use crate::player::components::ServerPlayer;
 
 const PAN_SPEED: f32 = 1.0;
@@ -20,9 +20,11 @@ impl Plugin for DebugServerPlugin {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
+            .insert_resource(MeshVisibility { visible: true })
             .insert_resource(DirectionalLightShadowMap { size: 4096 })
             .insert_resource(ZoomSpeed::default())
             .add_startup_system(setup_camera)
+            .add_system(toggle_visibility)
             .add_system(update_zoom_speed)
             // .add_startup_system(init_cursor_pos_system)
             // .add_system(cursor_pos_system)
@@ -32,7 +34,17 @@ impl Plugin for DebugServerPlugin {
     }
 }
 
-fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn toggle_visibility(buttons: Res<Input<KeyCode>>, mut query: Query<(&mut Visibility), With<Handle<Scene>>>, mut mesh_vis: ResMut<MeshVisibility>) {
+    if buttons.just_pressed(KeyCode::H) {
+        mesh_vis.visible = !mesh_vis.visible;
+        let visibility = if mesh_vis.visible { Visibility::Inherited } else { Visibility::Hidden };
+        for (mut vis) in query.iter_mut() {
+            vis.apply(&visibility);
+        }
+    }
+}
+
+fn setup_camera(mut commands: Commands) {
     let camera_translation = Vec3::new(0.0, 0.0, 20.0);
     let focus = Vec3::new(0.0, 0.0, 0.0);
     commands.spawn((
@@ -47,14 +59,6 @@ fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
         }
     ));
-    
-    let mut scene_transform = Transform::from_xyz(0.0, 0.0, 10.0).with_scale(Vec3::splat(0.001));
-    scene_transform.rotate_x(std::f32::consts::PI / 2.0);
-    // commands.spawn(SceneBundle {
-    //     scene: asset_server.load("models/volcano_island_lowpoly/scene.gltf#Scene0"),
-    //     transform: scene_transform,
-    //     ..default()
-    // });
 }
 
 fn update_zoom_speed(mut zoom_speed: ResMut<ZoomSpeed>, buttons: Res<Input<KeyCode>>) {

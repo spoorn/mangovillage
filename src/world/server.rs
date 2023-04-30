@@ -39,12 +39,11 @@ impl Plugin for LdtkServerPlugin {
 }
 
 fn spawn_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let mut scene_transform = Transform::from_xyz(0.0, 0.0, 10.0).with_scale(Vec3::splat(0.001));
+    let mut scene_transform = Transform::from_xyz(0.0, 0.0, -20.0).with_scale(Vec3::splat(0.005));
     scene_transform.rotate_x(std::f32::consts::PI / 2.0);
     commands.spawn(SceneBundle {
         scene: asset_server.load("models/volcano_island_lowpoly/scene.gltf#Scene0"),
         transform: scene_transform,
-        visibility: Visibility::Hidden,
         ..default()
     });
 }
