@@ -1,5 +1,5 @@
 use bevy::app::App;
-use bevy::prelude::{Camera3dBundle, Commands, Plugin};
+use bevy::prelude::{Camera3dBundle, Commands, default, Plugin, Transform, Vec3};
 
 pub struct CameraPlugin;
 
@@ -12,7 +12,15 @@ impl Plugin for CameraPlugin {
 }
 
 fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera3dBundle::default());
+    let camera_translation = Vec3::new(0.0, 0.0, 50.0);
+    let focus = Vec3::new(0.0, 0.0, 0.0);
+    commands.spawn((
+        Camera3dBundle {
+            transform: Transform::from_translation(camera_translation)
+                .looking_at(focus, Vec3::Y),
+            ..default()
+        },
+    ));
 }
 
 const ASPECT_RATIO: f32 = 16. / 9.;
