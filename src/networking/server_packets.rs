@@ -1,4 +1,4 @@
-use bevy::prelude::{Resource, Transform};
+use bevy::prelude::Resource;
 use durian::bincode_packet;
 use serde::{Deserialize, Serialize};
 

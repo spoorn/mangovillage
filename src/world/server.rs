@@ -14,7 +14,7 @@ impl Plugin for LevelServerPlugin {
         app.add_plugin(RapierDebugRenderPlugin::default().always_on_top())
             .add_state::<ServerState>()
             .add_system(spawn_scene.in_schedule(OnEnter(ServerState::LoadWorld)))
-            .add_system(tst.in_set(OnUpdate(ServerState::LoadWorld)));
+            .add_system(load_colliders.in_set(OnUpdate(ServerState::LoadWorld)));
     }
 }
 
@@ -27,7 +27,7 @@ fn spawn_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 // TODO: Make sure only select meshes we want
-fn tst(mut commands: Commands, meshes: Res<Assets<Mesh>>, mesh_query: Query<(Entity, &Handle<Mesh>), Without<Collider>>, asset_server: Res<AssetServer>, mut server_state: ResMut<NextState<ServerState>>) {
+fn load_colliders(mut commands: Commands, meshes: Res<Assets<Mesh>>, mesh_query: Query<(Entity, &Handle<Mesh>), Without<Collider>>, mut server_state: ResMut<NextState<ServerState>>) {
     let mut done = false;
    // let mesh = meshes.get(&asset_server.load("models/volcano_island_lowpoly/scene.gltf#Mesh0/Primitive0"));
     for (entity, mesh) in &mesh_query {

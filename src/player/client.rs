@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, default, Entity, error, info, Input, IntoSystemConfigs, KeyCode, OnUpdate, Plugin, Query, Res, ResMut, SceneBundle, Transform, Vec3};
+use bevy::prelude::{AssetServer, Commands, default, Entity, error, info, Input, IntoSystemConfigs, KeyCode, OnUpdate, Plugin, Query, Res, ResMut, SceneBundle, Transform, Vec3, With};
 use bevy::utils::HashMap;
 
 use crate::client::resources::{ClientId, ClientPacketManager};
@@ -16,7 +16,16 @@ pub struct PlayerClientPlugin;
 impl Plugin for PlayerClientPlugin {
     
     fn build(&self, app: &mut App) {
-        app.add_systems((movement_input, update_players).in_set(OnUpdate(ClientState::Running)));
+        app.add_systems((movement_input, update_players, transform_positions).in_set(OnUpdate(ClientState::Running)));
+    }
+}
+
+// Update bevy Transform from our Position
+pub fn transform_positions(mut query: Query<(&Position, &mut Transform), With<ClientPlayer>>) {
+    for (pos, mut trans) in query.iter_mut() {
+        if pos.x != trans.translation.x || pos.y != trans.translation.y || pos.z != trans.translation.z {  // Avoid new instantiations if possible
+            trans.translation = Vec3::new(pos.x, pos.y, pos.z);
+        }
     }
 }
 
@@ -43,7 +52,7 @@ fn movement_input(keys: Res<Input<KeyCode>>, mut manager: ResMut<ClientPacketMan
 
 // Player position is a local position with respect to the Map
 fn update_players(mut commands: Commands, mut players_query: Query<(&ClientPlayer, &mut Position, Entity)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
-    let mut update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
+    let update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
     // We only care about the last update
     if let Some(update_players) = update_players.as_ref().and_then(|x| x.last()) {
         // TODO: there has to be a faster way to do this than creating a map every iteration?

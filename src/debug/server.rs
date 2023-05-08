@@ -2,7 +2,7 @@
 
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::pbr::DirectionalLightShadowMap;
-use bevy::prelude::{AmbientLight, App, AssetServer, Camera3dBundle, Commands, debug, default, EventReader, Handle, Input, KeyCode, Mat3, MouseButton, Plugin, Quat, Query, Reflect, Res, ResMut, Scene, Transform, Vec2, Vec3, Window, With, Without};
+use bevy::prelude::{AmbientLight, App, Camera3dBundle, Commands, debug, default, EventReader, Handle, Input, KeyCode, Mat3, MouseButton, Plugin, Quat, Query, Reflect, Res, ResMut, Scene, Transform, Vec2, Vec3, Window, With, Without};
 use bevy::window::PrimaryWindow;
 use bevy_render::prelude::{Camera, Color, Projection, Visibility};
 

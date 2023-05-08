@@ -11,7 +11,7 @@ use crate::player::components::{ServerPlayer, ServerPlayerBundle};
 use crate::server::resources::ServerPacketManager;
 use crate::state::server::ServerState;
 use crate::world::components::WorldComponent;
-use crate::world::resources::{Map, PortalInfo, World};
+use crate::world::resources::Map;
 
 // Per second
 const PLAYER_MOVE_SPEED: f32 = 1.0;
