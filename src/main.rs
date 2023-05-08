@@ -13,7 +13,6 @@ mod client;
 mod server;
 mod player;
 mod camera;
-mod map;
 mod common;
 mod world;
 mod state;
@@ -82,8 +81,7 @@ fn main() {
                     })
                     .add_plugin(server::server::ServerPlugin { server_addr: server_addr.clone() })
                     .add_plugin(player::server::PlayerServerPlugin)
-                    .add_plugin(player::PlayerCommonPlugin)
-                    .add_plugin(world::server::LdtkServerPlugin)
+                    .add_plugin(world::server::LevelServerPlugin)
                     .add_plugin(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
                     .add_plugin(debug::server::DebugServerPlugin)
                     .run();
@@ -126,8 +124,7 @@ fn main() {
             .add_plugin(camera::CameraPlugin)
             .add_plugin(client::client::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone() })
             .add_plugin(player::client::PlayerClientPlugin)
-            .add_plugin(player::PlayerCommonPlugin)
-            .add_plugin(world::client::LdtkClientPlugin)
+            .add_plugin(world::client::WorldClientPlugin)
             .add_plugin(debug::client::DebugClientPlugin)
             .run();
     }

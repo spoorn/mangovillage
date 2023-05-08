@@ -1,3 +1,4 @@
+use bevy::prelude::{Resource, Transform};
 use durian::bincode_packet;
 use serde::{Deserialize, Serialize};
 
@@ -6,23 +7,35 @@ use serde::{Deserialize, Serialize};
 pub struct SpawnAck {
     // clientId of the player, so the client can keep track of which player is themselves
     pub id: u32,
-    // Which ldtk level to load when spawning in
-    pub level_iid: String
+    // Which level to load when spawning in
+    pub level: LevelInfo
+}
+
+// Can also be used as a Resource
+// TODO: don't send handle_id in a packet, so we can copy efficiently?
+#[derive(Resource, Serialize, Deserialize, Debug, Clone)]
+pub struct LevelInfo {
+    pub handle_id: String,
+    // x, y, z, x-rotation
+    pub scene_transform: [f32; 4],
+    pub scale: f32
 }
 
 #[bincode_packet]
 #[derive(Debug)]
 pub struct UpdatePlayerPositions {
-    pub positions: Vec<PlayerPosition>
+    pub players: Vec<PlayerInfo>
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub struct PlayerPosition {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PlayerInfo {
+    // TODO: Don't send this in a packet!
+    pub handle_id: String,
     pub id: u32,
-    pub local_pos: (f32, f32)
+    pub local_pos: (f32, f32, f32)
 }
 
 #[bincode_packet]
 pub struct ChangeLevel {
-    pub level_iid: String
+    pub handle_id: String
 }

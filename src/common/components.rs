@@ -9,17 +9,18 @@ use serde::{Deserialize, Serialize};
 pub struct Position {
     pub x: f32,
     pub y: f32,
+    pub z: f32
 }
 
 impl Display for Position {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", self.x, self.y)
+        write!(f, "({}, {}, {})", self.x, self.y, self.z)
     }
 }
 
 impl Position {
-    pub fn new(x: f32, y: f32) -> Self {
-        Position { x, y }
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Position { x, y, z }
     }
 }
 

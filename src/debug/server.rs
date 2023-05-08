@@ -34,11 +34,11 @@ impl Plugin for DebugServerPlugin {
     }
 }
 
-fn toggle_visibility(buttons: Res<Input<KeyCode>>, mut query: Query<(&mut Visibility), With<Handle<Scene>>>, mut mesh_vis: ResMut<MeshVisibility>) {
+fn toggle_visibility(buttons: Res<Input<KeyCode>>, mut query: Query<&mut Visibility, With<Handle<Scene>>>, mut mesh_vis: ResMut<MeshVisibility>) {
     if buttons.just_pressed(KeyCode::H) {
         mesh_vis.visible = !mesh_vis.visible;
         let visibility = if mesh_vis.visible { Visibility::Inherited } else { Visibility::Hidden };
-        for (mut vis) in query.iter_mut() {
+        for mut vis in query.iter_mut() {
             vis.apply(&visibility);
         }
     }

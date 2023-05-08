@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, default, Entity, error, info, Input, IntoSystemConfigs, KeyCode, OnUpdate, Plugin, Query, Res, ResMut, Sprite, SpriteBundle, Transform, Vec2};
+use bevy::prelude::{AssetServer, Commands, default, Entity, error, info, Input, IntoSystemConfigs, KeyCode, OnUpdate, Plugin, Query, Res, ResMut, SceneBundle, Transform, Vec3};
 use bevy::utils::HashMap;
 
 use crate::client::resources::{ClientId, ClientPacketManager};
 use crate::common::components::Position;
 use crate::common::Direction;
 use crate::networking::client_packets::Move;
-use crate::networking::server_packets::{UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder};
+use crate::networking::server_packets::{PlayerInfo, UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder};
 use crate::player::components::{ClientPlayer, Me};
 use crate::state::client::ClientState;
 
@@ -43,58 +43,52 @@ fn movement_input(keys: Res<Input<KeyCode>>, mut manager: ResMut<ClientPacketMan
 
 // Player position is a local position with respect to the Map
 fn update_players(mut commands: Commands, mut players_query: Query<(&ClientPlayer, &mut Position, Entity)>, mut manager: ResMut<ClientPacketManager>, asset_server: Res<AssetServer>, client_id: Res<ClientId>) {
-    let update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
-    if let Some(update_players) = update_players {
-        // We only care about the last update
-        if let Some(last) = update_players.last() {
-            // TODO: there has to be a faster way to do this than creating a map every iteration?
-            let mut players = HashMap::new();
-            let mut player_ids = HashSet::new();
-            for (player, position, entity) in players_query.iter_mut() {
-                players.insert(player.id, (position, entity));
-                player_ids.insert(player.id);
-            }
-            
-            // TODO: Would it be faster to handle a Despawn packet instead of looping through here?
-            let mut server_players = HashSet::new();
-            for player in last.positions.iter() {
-                server_players.insert(player.id);
-                if let Some((p, _entity)) = players.get_mut(&player.id) {
-                    p.x = player.local_pos.0;
-                    p.y = player.local_pos.1;
-                } else {
-                    // New player
-                    spawn_player(&mut commands, &asset_server, player.id, player.local_pos, player.id == client_id.id);
-                }
-            }
-            
-            // Remove despawned players
-            for removed_player in player_ids.difference(&server_players) {
-                let (pos, entity) = players.get(removed_player).unwrap();
-                info!("[client] Despawning player with id={} at position=({}, {})", removed_player, pos.x, pos.y);
-                commands.entity(*entity).despawn();
+    let mut update_players = manager.received::<UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder>(false).unwrap();
+    // We only care about the last update
+    if let Some(update_players) = update_players.as_ref().and_then(|x| x.last()) {
+        // TODO: there has to be a faster way to do this than creating a map every iteration?
+        let mut players = HashMap::new();
+        let mut player_ids = HashSet::new();
+        for (player, position, entity) in players_query.iter_mut() {
+            players.insert(player.id, (position, entity));
+            player_ids.insert(player.id);
+        }
+        
+        // TODO: Would it be faster to handle a Despawn packet instead of looping through here?
+        let mut server_players = HashSet::new();
+        for player in update_players.players.iter() {
+            server_players.insert(player.id);
+            if let Some((p, _entity)) = players.get_mut(&player.id) {
+                p.x = player.local_pos.0;
+                p.y = player.local_pos.1;
+                p.z = player.local_pos.2;
+            } else {
+                // New player
+                spawn_player(&mut commands, &asset_server, player, player.id == client_id.id);
             }
         }
+        
+        // Remove despawned players
+        for removed_player in player_ids.difference(&server_players) {
+            let (pos, entity) = players.get(removed_player).unwrap();
+            info!("[client] Despawning player with id={} at position={:?}", removed_player, pos);
+            commands.entity(*entity).despawn();
+        }
     }
-    
-    // TODO: handle removed players, can probably optimize above a bit if we do this
 }
 
-pub fn spawn_player(commands: &mut Commands, asset_server: &Res<AssetServer>, id: u32, position: (f32, f32), is_self: bool) {
-    info!("[client] Spawning new player at ({}, {})", position.0, position.1);
+pub fn spawn_player(commands: &mut Commands, asset_server: &Res<AssetServer>, player: &PlayerInfo, is_self: bool) {
+    info!("[client] Spawning new player at {:?}", player.local_pos);
+    // TODO: get player scale from server
     let mut player_spawn = commands
-        .spawn(SpriteBundle {
-            sprite: Sprite {
-                custom_size: Some(Vec2::splat(12.0)),
-                ..default()
-            },
-            transform: Transform::from_xyz(position.0, position.1, 10.0),
-            texture: asset_server.load("icon/test.png"),
+        .spawn(SceneBundle {
+            scene: asset_server.load(&player.handle_id),
+            transform: Transform::from_xyz(player.local_pos.0, player.local_pos.1, player.local_pos.2).with_scale(Vec3::splat(0.05)),
             ..default()
         });
     player_spawn
-        .insert(ClientPlayer { id })
-        .insert(Position { x: position.0, y: position.1 });
+        .insert(ClientPlayer { id: player.id })
+        .insert(Position { x: player.local_pos.0, y: player.local_pos.1, z: player.local_pos.2 });
 
     if is_self {
         player_spawn.insert(Me);

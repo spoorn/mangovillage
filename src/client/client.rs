@@ -3,7 +3,6 @@ use std::time::Duration;
 use bevy::app::{App, AppExit};
 use bevy::prelude::{Commands, EventReader, info, IntoSystemConfig, NextState, OnUpdate, Plugin, Res, ResMut};
 use bevy::window::WindowCloseRequested;
-use bevy_ecs_ldtk::LevelSelection;
 use durian::{ClientConfig, PacketManager, register_receive, register_send};
 
 use crate::client::resources::{ClientId, ClientInfo, ClientPacketManager};
@@ -34,8 +33,8 @@ impl Plugin for ClientPlugin {
 fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     let mut manager = PacketManager::new();
     // register packets client-side
-    let receives = util::validate_results(true, register_receive!(manager, (UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder), (SpawnAck, SpawnAckPacketBuilder), (ChangeLevel, ChangeLevelPacketBuilder)));
-    let sends = util::validate_results(true, register_send!(manager, Move, Disconnect));
+    let receives = util::validate_register_results(true, register_receive!(manager, (UpdatePlayerPositions, UpdatePlayerPositionsPacketBuilder), (SpawnAck, SpawnAckPacketBuilder), (ChangeLevel, ChangeLevelPacketBuilder)));
+    let sends = util::validate_register_results(true, register_send!(manager, Move, Disconnect));
     // TODO: better error handling
     if !receives { panic!("Failed to register all receive packets"); }
     if !sends { panic!("Failed to register all send packets"); }
@@ -63,26 +62,22 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     commands.insert_resource(ClientPacketManager { manager });
 }
 
-// TODO: Use states instead when bevy 0.10 with stateless RFC comes out
 fn get_client_id(mut commands: Commands, mut manager: ResMut<ClientPacketManager>, mut client_id: ResMut<ClientId>, mut client_state: ResMut<NextState<ClientState>>) {
     if !client_id.set {
         if let Some(ack) = manager.received::<SpawnAck, SpawnAckPacketBuilder>(true).unwrap() {
             let id = ack[0].id;
             info!("[client] Client ID is {}", id);
-            //commands.insert_resource(ClientId { id });
-            //break;
             client_id.id = id;
             client_id.set = true;
-            client_state.set(ClientState::Running);
+            client_state.set(ClientState::SpawnScene);
             
-            let level_iid = ack[0].level_iid.clone();
-            info!("[client] Loading level iid={}", level_iid);
-            commands.insert_resource(LevelSelection::Iid(level_iid))
+            info!("[client] Loading level={:?}", ack[0].level);
+            commands.insert_resource(ack[0].level.clone())
         }
     }
 }
 
-// TODO: When changing level, it can flicker the previous positions for a few frames.  Fix to be smoother transition.
+// Send disconnect packet to server to disconnect gracefully rather than wait for timeout.
 fn on_app_exit(mut manager: ResMut<ClientPacketManager>, exit: EventReader<AppExit>, close_window: EventReader<WindowCloseRequested>) {
     if !exit.is_empty() || !close_window.is_empty() {
         info!("[client] Exiting game");

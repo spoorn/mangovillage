@@ -1,33 +1,25 @@
 use bevy::app::App;
-use bevy::prelude::{AssetServer, Commands, default, Plugin, Res, ResMut};
-use bevy_ecs_ldtk::{LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSelection, LevelSpawnBehavior, SetClearColor};
-use crate::client::resources::ClientPacketManager;
-use crate::networking::server_packets::{ChangeLevel, ChangeLevelPacketBuilder};
+use bevy::prelude::{AssetServer, Commands, IntoSystemConfig, NextState, OnUpdate, Plugin, Res, ResMut};
+use crate::networking::server_packets::LevelInfo;
+use crate::state::client::ClientState;
+use crate::world;
 
-pub struct LdtkClientPlugin;
-impl Plugin for LdtkClientPlugin {
+pub struct WorldClientPlugin;
+impl Plugin for WorldClientPlugin {
 
     fn build(&self, app: &mut App) {
-        app.add_plugin(LdtkPlugin)
-            .insert_resource(LdtkSettings {
-                level_spawn_behavior: LevelSpawnBehavior::UseZeroTranslation,
-                set_clear_color: SetClearColor::FromLevelBackground,
-                ..Default::default()
-            })
-            .add_startup_system(load_level)
-            .add_system(handle_change_level);
+        app.add_system(spawn_scene.in_set(OnUpdate(ClientState::SpawnScene)));
     }
 }
 
-fn load_level(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(LdtkWorldBundle {
-        ldtk_handle: asset_server.load("ldtk/test.ldtk"),
-        ..default()
-    });
+fn spawn_scene(mut commands: Commands, asset_server: Res<AssetServer>, level: Res<LevelInfo>, mut client_state: ResMut<NextState<ClientState>>) {
+    world::load_level(&mut commands, &asset_server, &level);
+    client_state.set(ClientState::Running);
 }
 
-fn handle_change_level(mut commands: Commands, mut manager: ResMut<ClientPacketManager>) {
-    if let Some(change_levels) = manager.received::<ChangeLevel, ChangeLevelPacketBuilder>(false).unwrap() {
-        commands.insert_resource(LevelSelection::Iid(change_levels.last().unwrap().level_iid.to_string()));
-    }
-}
+// 
+// fn handle_change_level(mut commands: Commands, mut manager: ResMut<ClientPacketManager>) {
+//     if let Some(change_levels) = manager.received::<ChangeLevel, ChangeLevelPacketBuilder>(false).unwrap() {
+//         commands.insert_resource(LevelSelection::Iid(change_levels.last().unwrap().level_iid.to_string()));
+//     }
+// }

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use bevy::prelude::error;
 
-pub fn validate_results<T: Display>(is_client: bool, results: Vec<Result<(), T>>) -> bool {
+pub fn validate_register_results<T: Display>(is_client: bool, results: Vec<Result<(), T>>) -> bool {
     let mut has_error = false;
     for result in results.iter() {
         if let Err(e) = result {

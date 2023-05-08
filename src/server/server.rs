@@ -28,8 +28,8 @@ impl Plugin for ServerPlugin {
 fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     let mut manager = PacketManager::new();
     // register server side packets
-    let receives = util::validate_results(false, register_receive!(manager, (Move, MovePacketBuilder), (Disconnect, DisconnectPacketBuilder)));
-    let sends = util::validate_results(false, register_send!(manager, UpdatePlayerPositions, SpawnAck, ChangeLevel));
+    let receives = util::validate_register_results(false, register_receive!(manager, (Move, MovePacketBuilder), (Disconnect, DisconnectPacketBuilder)));
+    let sends = util::validate_register_results(false, register_send!(manager, UpdatePlayerPositions, SpawnAck, ChangeLevel));
     // TODO: better error handling
     if !receives { panic!("Failed to register all receive packets"); }
     if !sends { panic!("Failed to register all send packets"); }
