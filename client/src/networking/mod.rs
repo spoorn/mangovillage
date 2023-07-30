@@ -9,6 +9,7 @@ use mangovillage_common::networking::client_packets::{Connect, Disconnect};
 use mangovillage_common::networking::server_packets::{ConnectAck, ConnectAckPacketBuilder};
 use mangovillage_common::util;
 use crate::networking::resource::{ClientInfo, ClientPacketManager};
+use crate::state::ClientState;
 
 pub struct ClientPlugin {
     pub client_addr: String,
@@ -23,6 +24,7 @@ impl Plugin for ClientPlugin {
             server_addr: self.server_addr.clone()
         })
             .add_systems(Startup, init_client)
+            .add_systems(Update, transition_spawn_scene.run_if(in_state(ClientState::JoiningServer)))
             .add_systems(Update, on_app_exit);
     }
 }
@@ -43,6 +45,10 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     info!("[client] Initialized client");
     manager.send(Connect).unwrap();
     commands.insert_resource(ClientPacketManager { manager });
+}
+
+fn transition_spawn_scene(mut client_state: ResMut<NextState<ClientState>>) {
+    client_state.set(ClientState::SpawnScene);
 }
 
 // Send disconnect packet to server to disconnect gracefully rather than wait for timeout.

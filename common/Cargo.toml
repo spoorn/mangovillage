@@ -8,4 +8,5 @@ edition.workspace = true
 [dependencies]
 tracing.workspace = true
 durian.workspace = true
-
+bevy.workspace = true
+serde.workspace = true

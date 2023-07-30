@@ -15,7 +15,7 @@ fn main() {
         App::new()
             .add_plugins(MinimalPlugins.build()
                 .add( LogPlugin {
-                    filter: "info,mangovillage=debug,durian=info,wgpu=error".to_string(),
+                    filter: "info,mangovillage_server=debug,durian=info,wgpu=error".to_string(),
                     level: Level::INFO
                 })
             )

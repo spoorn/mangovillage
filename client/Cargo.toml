@@ -10,3 +10,4 @@ mangovillage_common.workspace = true
 bevy.workspace = true
 bevy_embedded_assets.workspace = true
 durian.workspace = true
+derivative.workspace = true

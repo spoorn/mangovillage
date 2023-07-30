@@ -1,10 +1,14 @@
 mod networking;
+mod state;
+mod world;
+mod debug;
 
 use std::env;
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
 use bevy_embedded_assets::EmbeddedAssetPlugin;
+use crate::state::ClientState;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -16,7 +20,7 @@ fn main() {
 
     // Set log level manually
     let default_plugins = DefaultPlugins.build().set(LogPlugin {
-        filter: "info,mangovillage=debug,durian=info,wgpu=error".to_string(),
+        filter: "info,mangovillage_client=debug,durian=info,wgpu=error".to_string(),
         level: Level::INFO
     });
 
@@ -37,6 +41,11 @@ fn main() {
                     ..default()
                 }
             }))
-        .add_plugins(networking::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone()  })
+        .add_state::<ClientState>()
+        .add_plugins((
+            networking::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone()  },
+            world::WorldPlugin,
+            debug::camera::DebugCameraPlugin
+        ))
         .run();
 }
