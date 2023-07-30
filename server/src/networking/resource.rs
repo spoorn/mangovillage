@@ -4,8 +4,7 @@ use durian::PacketManager;
 
 #[derive(Resource)]
 pub struct ServerInfo {
-    pub server_addr: String,
-    pub want_num_clients: u8
+    pub server_addr: String
 }
 
 #[derive(Resource)]

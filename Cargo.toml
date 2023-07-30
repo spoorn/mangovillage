@@ -1,26 +1,39 @@
+[workspace]
+members = [
+    "common",
+    "client",
+    "server"
+]
+
 [package]
 name = "mangovillage"
 version = "0.1.0"
+edition.workspace = true
+
+[workspace.package]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-bevy = { version = "0.10", features= [ "jpeg" ] }
-bevy-inspector-egui = "0.18"
+[workspace.dependencies]
+mangovillage_common = { path = "./common" }
+bevy = { version = "0.11", features= [ "jpeg" ] }
+bevy-inspector-egui = "0.19"
 #bevy_ecs_ldtk = "0.6"
 # Bug in bevy_ecs_tilemap where background is blended with white tiles: https://github.com/Trouv/bevy_ecs_ldtk/issues/65
 #bevy_ecs_tilemap = "0.10.0"
-bevy_embedded_assets = "0.7"
-bevy_rapier3d = { version = "0.21.0", features = [ "debug-render-3d" ] }
-bevy_render = "0.10"
+bevy_embedded_assets = "0.8"
+bevy_rapier3d = { version = "0.22.0", features = [ "debug-render-3d" ] }
+bevy_render = "0.11"
 derivative = "2.2.0"
-durian = { path = "../durian/durian" }
+durian = { path = "../durian/durian", version = "0.4" }
+durian_macros = { path = "../durian/durian_macros", version = "0.4" }
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
 # To close the console window on client
 # https://stackoverflow.com/questions/29763647/how-to-make-a-program-that-does-not-display-the-console-window
 winapi = { version = "0.3", features = ["wincon", "winuser"] }
+tracing = "0.1"
 
 # TODO: Enabling this slows down the program, making it become unresponsive within a few seconds.  Why?
 # Seems to be related to the bevy LogPlugin in main.rs.  If I change the filter for crate durian to "durian=debug",

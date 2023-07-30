@@ -1,10 +1,9 @@
 use durian::bincode_packet;
-use crate::common::Direction;
 
+/// Connect to server
 #[bincode_packet]
-pub struct Move {
-    pub dir: Direction
-}
+pub struct Connect;
 
+/// For graceful disconnects
 #[bincode_packet]
 pub struct Disconnect;

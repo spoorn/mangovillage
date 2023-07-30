@@ -3,13 +3,6 @@ use bevy::prelude::Resource;
 use durian::PacketManager;
 
 #[derive(Resource)]
-pub struct ClientId {
-    pub id: u32,
-    // TODO: temporary, until logic in client.rs is fixed.  True if was set, False if still waiting to be set
-    pub set: bool
-}
-
-#[derive(Resource)]
 pub struct ClientInfo {
     pub client_addr: String,
     pub server_addr: String
