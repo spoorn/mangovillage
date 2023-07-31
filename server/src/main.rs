@@ -1,9 +1,23 @@
-mod networking;
-
+use bevy::app::ScheduleRunnerPlugin;
+use bevy::core_pipeline::CorePipelinePlugin;
+use bevy::gltf::GltfPlugin;
 use std::env;
 
 use bevy::log::{Level, LogPlugin};
+use bevy::pbr::PbrPlugin;
 use bevy::prelude::*;
+use bevy::render::settings::WgpuSettings;
+use bevy::render::RenderPlugin;
+use bevy::window::ExitCondition;
+use bevy::winit::WinitPlugin;
+use bevy_embedded_assets::EmbeddedAssetPlugin;
+
+use crate::state::ServerState;
+
+mod networking;
+mod player;
+mod state;
+mod world;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -11,21 +25,25 @@ fn main() {
     let server_addr = args.get(1).unwrap_or(&default_server_addr);
     println!("[server] Initializing server");
 
-    loop {
-        App::new()
-            .add_plugins(MinimalPlugins.build()
-                .add( LogPlugin {
-                    filter: "info,mangovillage_server=debug,durian=info,wgpu=error".to_string(),
-                    level: Level::INFO
-                })
-            )
-            // So both client and server can be ran at once without blocking
-            // .insert_resource(WinitSettings {
-            //     return_from_run: true,
-            //     focused_mode: UpdateMode::Continuous,
-            //     unfocused_mode: UpdateMode::Continuous
-            // })
-            .add_plugins(networking::ServerPlugin { server_addr: server_addr.clone() })
-            .run();
-    }
+    App::new()
+        .add_plugins(
+            DefaultPlugins
+                .build()
+                .set(LogPlugin { filter: "info,mangovillage_server=debug,durian=info,wgpu=error".to_string(), level: Level::INFO })
+                // If we disable WinitPlugin, we'll end up returning from App::run() immediately.  Disable it for true headless
+                //.disable::<WinitPlugin>()
+                // headless mode, with no rendering backends and no window
+                .set(RenderPlugin { wgpu_settings: WgpuSettings { backends: None, ..default() } })
+                .set(WindowPlugin { primary_window: None, exit_condition: ExitCondition::DontExit, close_when_requested: false, ..default() })
+                .add_before::<AssetPlugin, _>(EmbeddedAssetPlugin),
+        )
+        // So both client and server can be ran at once without blocking
+        // .insert_resource(WinitSettings {
+        //     return_from_run: true,
+        //     focused_mode: UpdateMode::Continuous,
+        //     unfocused_mode: UpdateMode::Continuous
+        // })
+        .add_state::<ServerState>()
+        .add_plugins((networking::ServerPlugin { server_addr: server_addr.clone() }, world::WorldPlugin))
+        .run();
 }

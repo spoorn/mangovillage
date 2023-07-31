@@ -5,9 +5,9 @@ fn main() {
     // let client_addr = if args.len() >= 3 { args[2].to_owned() } else { "0.0.0.0:5001".to_string() };
     // let server_addr = if args.len() >= 4 { args[3].to_owned() } else { "192.168.1.243:28154".to_string() };
     // // cargo run --release -- client 0.0.0.0:5002
-    // 
+    //
     // // https://github.com/bevyengine/bevy/issues/1969 - cannot add LogPlugin more than once
-    // 
+    //
     // if client_or_server == "server" || client_or_server == "both" {
     //     println!("[server] Initializing server");
     //     let server_addr = server_addr.clone();
@@ -58,7 +58,7 @@ fn main() {
     //         thread::spawn(server_run);
     //     }
     // }
-    // 
+    //
     // // "both" to spin up the server on a separate background thread, and client on main thread
     // if client_or_server == "client" || client_or_server == "both" {
     //     println!("[client] Initializing client");

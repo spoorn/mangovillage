@@ -33,7 +33,6 @@ serde = { version = "1.0", features = ["derive"] }
 # To close the console window on client
 # https://stackoverflow.com/questions/29763647/how-to-make-a-program-that-does-not-display-the-console-window
 winapi = { version = "0.3", features = ["wincon", "winuser"] }
-tracing = "0.1"
 
 # TODO: Enabling this slows down the program, making it become unresponsive within a few seconds.  Why?
 # Seems to be related to the bevy LogPlugin in main.rs.  If I change the filter for crate durian to "durian=debug",

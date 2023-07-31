@@ -1,5 +1,5 @@
+use bevy::log::error;
 use std::fmt::Display;
-use tracing::error;
 
 pub fn validate_register_results<T: Display>(is_client: bool, results: Vec<Result<(), T>>) -> bool {
     let mut has_error = false;

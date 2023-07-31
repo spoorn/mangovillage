@@ -1,7 +1,8 @@
 use bevy::prelude::Resource;
+use serde::{Deserialize, Serialize};
 
 /// Level metadata
-#[derive(Resource)]
+#[derive(Resource, Serialize, Deserialize)]
 pub struct LevelInfo {
     pub handle_id: String,
     // x, y, z, x-rotation
