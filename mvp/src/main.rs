@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
 use bevy_embedded_assets::EmbeddedAssetPlugin;
-use bevy_rapier3d::prelude::*;
+use bevy_xpbd_3d::prelude::*;
 
 fn main() {
     App::new()
@@ -20,7 +20,7 @@ fn main() {
             }
         }))
         .add_state::<ClientState>()
-        .add_plugins((RapierPhysicsPlugin::<NoUserData>::default(), RapierDebugRenderPlugin::default()))
+        .add_plugins(PhysicsPlugins::default())
         .add_systems(Startup, (load_world, setup_camera))
         .add_systems(Update, load_colliders.run_if(in_state(ClientState::LoadingLevel)))
         .run();
@@ -54,12 +54,12 @@ fn load_world(mut commands: Commands, asset_server: Res<AssetServer>, mut client
 fn load_colliders(
     mut commands: Commands,
     meshes: Res<Assets<Mesh>>,
-    mesh_query: Query<(Entity, &Handle<Mesh>)>,
+    mesh_query: Query<(Entity, &Handle<Mesh>), Without<Collider>>,
     mut client_state: ResMut<NextState<ClientState>>,
 ) {
     let mut done = false;
     for (entity, mesh) in &mesh_query {
-        let collider = Collider::from_bevy_mesh(meshes.get(mesh).unwrap(), &ComputedColliderShape::TriMesh);
+        let collider = Collider::trimesh_from_bevy_mesh(meshes.get(mesh).unwrap());
         if let Some(collider) = collider {
             commands.entity(entity).insert(collider);
             done = true;

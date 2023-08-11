@@ -13,4 +13,5 @@ durian.workspace = true
 derivative.workspace = true
 
 # TODO: Remove
-bevy_rapier3d.workspace = true
+#bevy_rapier3d.workspace = true
+bevy_xpbd_3d = { git = "https://github.com/Jondolf/bevy_xpbd", branch = "main", features = ["debug-plugin"] }
