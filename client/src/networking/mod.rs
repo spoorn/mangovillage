@@ -1,28 +1,24 @@
 pub mod resource;
 
-use std::time::Duration;
+use crate::networking::resource::{ClientInfo, ClientPacketManager};
+use crate::state::ClientState;
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::window::WindowCloseRequested;
-use durian::{ClientConfig, PacketManager, register_receive, register_send};
+use durian::{register_receive, register_send, ClientConfig, PacketManager};
 use mangovillage_common::networking::client_packets::{Connect, Disconnect};
 use mangovillage_common::networking::server_packets::{ConnectAck, ConnectAckPacketBuilder, SpawnScene, SpawnScenePacketBuilder};
 use mangovillage_common::util;
-use crate::networking::resource::{ClientInfo, ClientPacketManager};
-use crate::state::ClientState;
+use std::time::Duration;
 
 pub struct ClientPlugin {
     pub client_addr: String,
-    pub server_addr: String
+    pub server_addr: String,
 }
 
 impl Plugin for ClientPlugin {
-
     fn build(&self, app: &mut App) {
-        app.insert_resource(ClientInfo {
-            client_addr: self.client_addr.clone(),
-            server_addr: self.server_addr.clone()
-        })
+        app.insert_resource(ClientInfo { client_addr: self.client_addr.clone(), server_addr: self.server_addr.clone() })
             .add_systems(Startup, init_client)
             .add_systems(Update, transition_running.run_if(in_state(ClientState::JoiningServer)))
             .add_systems(Update, on_app_exit);
@@ -32,11 +28,18 @@ impl Plugin for ClientPlugin {
 fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     let mut manager = PacketManager::new();
     // register packets client-side
-    let receives = util::validate_register_results(true, register_receive!(manager, (ConnectAck, ConnectAckPacketBuilder), (SpawnScene, SpawnScenePacketBuilder)));
+    let receives = util::validate_register_results(
+        true,
+        register_receive!(manager, (ConnectAck, ConnectAckPacketBuilder), (SpawnScene, SpawnScenePacketBuilder)),
+    );
     let sends = util::validate_register_results(true, register_send!(manager, Connect, Disconnect));
     // TODO: better error handling
-    if !receives { panic!("Failed to register all receive packets"); }
-    if !sends { panic!("Failed to register all send packets"); }
+    if !receives {
+        panic!("Failed to register all receive packets");
+    }
+    if !sends {
+        panic!("Failed to register all send packets");
+    }
     let mut client_config = ClientConfig::new(client_info.client_addr.clone(), client_info.server_addr.clone(), 2, 2);
     // Server sends keep alive packets
     client_config.with_keep_alive_interval(Duration::from_secs(30));
@@ -47,7 +50,9 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     commands.insert_resource(ClientPacketManager { manager });
 }
 
+/// Goes to Running state initially, and switches states when we get commands from server
 fn transition_running(mut client_state: ResMut<NextState<ClientState>>) {
+    info!("Transitioning state to Running");
     client_state.set(ClientState::Running);
 }
 

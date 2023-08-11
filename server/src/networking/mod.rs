@@ -97,6 +97,8 @@ fn handle_leaves(mut manager: ResMut<ServerPacketManager>, mut commands: Command
     }
 }
 
+/// Load in the world right away
 fn transition_load_world(mut server_state: ResMut<NextState<ServerState>>) {
+    info!("Transitioning state to LoadWorld");
     server_state.set(ServerState::LoadWorld);
 }

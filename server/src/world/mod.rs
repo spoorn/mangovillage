@@ -19,5 +19,6 @@ fn load_world(mut commands: Commands, asset_server: Res<AssetServer>, mut server
     };
     info!("[server] Spawning level {}", level.handle_id);
     world::load_level(&mut commands, &asset_server, &level);
-    server_state.set(ServerState::Running);
+    info!("[server] Transitioning state to LoadPhysics");
+    server_state.set(ServerState::LoadPhysics);
 }

@@ -5,5 +5,6 @@ pub enum ServerState {
     #[default]
     StartUp,
     LoadWorld,
-    Running
+    LoadPhysics,
+    Running,
 }
