@@ -4,5 +4,6 @@ use bevy::prelude::States;
 pub enum ClientState {
     #[default]
     JoiningServer,
-    Running
+    LoadingLevel,
+    Running,
 }

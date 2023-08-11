@@ -1,14 +1,15 @@
+mod debug;
 mod networking;
+mod physics;
 mod state;
 mod world;
-mod debug;
 
-use std::env;
+use crate::state::ClientState;
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
 use bevy_embedded_assets::EmbeddedAssetPlugin;
-use crate::state::ClientState;
+use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -19,33 +20,30 @@ fn main() {
     println!("[client] Initializing client");
 
     // Set log level manually
-    let default_plugins = DefaultPlugins.build().set(LogPlugin {
-        filter: "info,mangovillage_client=debug,durian=info,wgpu=error".to_string(),
-        level: Level::INFO
-    });
+    let default_plugins =
+        DefaultPlugins.build().set(LogPlugin { filter: "info,mangovillage_client=debug,durian=info,wgpu=error".to_string(), level: Level::INFO });
 
     App::new()
-        // This sets image filtering to nearest 
-        // This is done to prevent textures with low resolution (e.g. pixel art) from being blurred 
-        // by linear filtering. 
-        .add_plugins(default_plugins.set(ImagePlugin::default_nearest())
-            .add_before::<AssetPlugin, _>(EmbeddedAssetPlugin)
-            .set({
-                WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "Mango Village".to_string(),
-                        resolution: WindowResolution::new(1280.0, 720.0),
-                        position: WindowPosition::Centered(MonitorSelection::Primary),
-                        ..default()
-                    }),
+        // This sets image filtering to nearest
+        // This is done to prevent textures with low resolution (e.g. pixel art) from being blurred
+        // by linear filtering.
+        .add_plugins(default_plugins.set(ImagePlugin::default_nearest()).add_before::<AssetPlugin, _>(EmbeddedAssetPlugin).set({
+            WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Mango Village".to_string(),
+                    resolution: WindowResolution::new(1280.0, 720.0),
+                    position: WindowPosition::Centered(MonitorSelection::Primary),
                     ..default()
-                }
-            }))
+                }),
+                ..default()
+            }
+        }))
         .add_state::<ClientState>()
         .add_plugins((
-            networking::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone()  },
+            networking::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone() },
             world::WorldPlugin,
-            debug::camera::DebugCameraPlugin
+            physics::PhysicsPlugin,
+            debug::camera::DebugCameraPlugin,
         ))
         .run();
 }

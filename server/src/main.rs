@@ -1,15 +1,10 @@
-use bevy::app::ScheduleRunnerPlugin;
-use bevy::core_pipeline::CorePipelinePlugin;
-use bevy::gltf::GltfPlugin;
 use std::env;
 
 use bevy::log::{Level, LogPlugin};
-use bevy::pbr::PbrPlugin;
 use bevy::prelude::*;
 use bevy::render::settings::WgpuSettings;
 use bevy::render::RenderPlugin;
 use bevy::window::ExitCondition;
-use bevy::winit::WinitPlugin;
 use bevy_embedded_assets::EmbeddedAssetPlugin;
 
 use crate::state::ServerState;
