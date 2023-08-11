@@ -13,10 +13,6 @@ impl Plugin for PhysicsPlugin {
     }
 }
 
-fn second_run(mut counter: Local<u32>) -> bool {
-    *counter < 3
-}
-
 // TODO: optimize
 fn load_colliders(
     mut commands: Commands,
