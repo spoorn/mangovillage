@@ -98,7 +98,7 @@ fn handle_leaves(mut manager: ResMut<ServerPacketManager>, mut commands: Command
     for (entity, player) in &players_query {
         if players_to_remove.contains(&player.addr) {
             info!("[server] Removing player with addr={}", player.addr);
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
