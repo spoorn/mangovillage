@@ -1,17 +1,20 @@
+use std::time::Duration;
+
+use bevy::prelude::*;
+use bevy::utils::HashSet;
+use durian::{register_receive, register_send, PacketManager, ServerConfig};
+
+use mangovillage_common::networking::client_packets::{Connect, ConnectPacketBuilder, Disconnect, DisconnectPacketBuilder};
+use mangovillage_common::networking::server_packets::{ConnectAck, Players, SpawnScene};
+use mangovillage_common::resource::LevelInfo;
+use mangovillage_common::util;
+
 use crate::networking::resource::{ServerInfo, ServerPacketManager};
 use crate::player;
 use crate::player::component::ServerPlayer;
 use crate::state::ServerState;
-use bevy::prelude::*;
-use bevy::utils::HashSet;
-use durian::{register_receive, register_send, PacketManager, ServerConfig};
-use mangovillage_common::networking::client_packets::{Connect, ConnectPacketBuilder, Disconnect, DisconnectPacketBuilder};
-use mangovillage_common::networking::server_packets::{ConnectAck, SpawnScene};
-use mangovillage_common::resource::LevelInfo;
-use mangovillage_common::util;
-use std::time::Duration;
 
-mod resource;
+pub mod resource;
 
 pub struct ServerPlugin {
     pub server_addr: String,
@@ -31,7 +34,7 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     // register server side packets
     let receives =
         util::validate_register_results(false, register_receive!(manager, (Connect, ConnectPacketBuilder), (Disconnect, DisconnectPacketBuilder)));
-    let sends = util::validate_register_results(false, register_send!(manager, ConnectAck, SpawnScene));
+    let sends = util::validate_register_results(false, register_send!(manager, ConnectAck, SpawnScene, Players));
     // TODO: better error handling
     if !receives {
         panic!("Failed to register all receive packets");
@@ -39,7 +42,7 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     if !sends {
         panic!("Failed to register all send packets");
     }
-    let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 2, 2);
+    let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 2, 3);
     server_config.with_keep_alive_interval(Duration::from_secs(30));
     manager.init_server(server_config).unwrap();
 
@@ -48,12 +51,15 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
 }
 
 // TODO: sweep for clients that did not send legit Connect packet and disconnect them
-fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Commands) {
+fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, asset_server: Res<AssetServer>) {
     let connect_packets = manager.received_all::<Connect, ConnectPacketBuilder>(false).unwrap();
     for (addr, leaves) in connect_packets.into_iter() {
         if matches!(leaves, Some(connects) if !connects.is_empty()) {
             info!("[server] Client with addr={} connected", addr);
-            player::spawn_player(&mut commands, addr.clone(), manager.get_client_id(addr.clone()).unwrap());
+            player::spawn_player(&mut commands, addr.clone(), manager.get_client_id(addr.clone()).unwrap(), &asset_server);
+            let client_id = manager.get_client_id(&addr).unwrap();
+            info!("Sending ConnectAck to client id={}, addr={}", client_id, addr);
+            manager.send_to(&addr, ConnectAck { id: client_id }).unwrap();
             // TODO: refactor this out of here
             info!("[server] Sending SpawnScene command to client {}", addr);
             manager

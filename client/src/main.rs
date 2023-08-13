@@ -1,6 +1,7 @@
 mod debug;
 mod networking;
 mod physics;
+mod player;
 mod state;
 mod world;
 
@@ -44,6 +45,7 @@ fn main() {
             world::WorldPlugin,
             physics::PhysicsPlugin,
             debug::camera::DebugCameraPlugin,
+            player::PlayerPlugin,
         ))
         .run();
 }

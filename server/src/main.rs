@@ -40,6 +40,11 @@ fn main() {
         //     unfocused_mode: UpdateMode::Continuous
         // })
         .add_state::<ServerState>()
-        .add_plugins((networking::ServerPlugin { server_addr: server_addr.clone() }, world::WorldPlugin, physics::PhysicsPlugin))
+        .add_plugins((
+            networking::ServerPlugin { server_addr: server_addr.clone() },
+            world::WorldPlugin,
+            physics::PhysicsPlugin,
+            player::PlayerPlugin,
+        ))
         .run();
 }

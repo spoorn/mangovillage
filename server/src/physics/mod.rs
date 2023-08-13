@@ -1,12 +1,15 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use mangovillage_common::physics;
 
 use crate::state::ServerState;
 
 pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default()).add_systems(Update, load_colliders.run_if(in_state(ServerState::LoadPhysics)));
+        app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+            .insert_resource(RapierConfiguration { gravity: Vec3::new(0.0, 0.0, -1.0), ..default() })
+            .add_systems(Update, load_colliders.run_if(in_state(ServerState::LoadPhysics)));
     }
 }
 
@@ -19,14 +22,7 @@ fn load_colliders(
     mut counter: Local<u32>,
 ) {
     // let mesh = meshes.get(&asset_server.load("models/volcano_island_lowpoly/scene.gltf#Mesh0/Primitive0"));
-    let mut done = false;
-    for (entity, mesh) in &mesh_query {
-        let collider = Collider::from_bevy_mesh(meshes.get(mesh).unwrap(), &ComputedColliderShape::TriMesh);
-        if let Some(collider) = collider {
-            commands.entity(entity).insert(collider);
-            done = true;
-        }
-    }
+    let done = physics::spawn_colliders(&mut commands, &meshes, mesh_query.iter());
     //println!("done={}, counter={}", done, *counter);
     if done {
         *counter += 1;

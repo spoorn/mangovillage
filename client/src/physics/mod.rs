@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
+use mangovillage_common::physics;
+
 use crate::state::ClientState;
 
 pub struct PhysicsPlugin;
@@ -20,14 +22,7 @@ fn load_colliders(
     mut counter: Local<u32>,
 ) {
     // let mesh = meshes.get(&asset_server.load("models/volcano_island_lowpoly/scene.gltf#Mesh0/Primitive0"));
-    let mut done = false;
-    for (entity, mesh) in &mesh_query {
-        let collider = Collider::from_bevy_mesh(meshes.get(mesh).unwrap(), &ComputedColliderShape::TriMesh);
-        if let Some(collider) = collider {
-            commands.entity(entity).insert(collider);
-            done = true;
-        }
-    }
+    let done = physics::spawn_colliders(&mut commands, &meshes, mesh_query.iter());
     //println!("done={}, counter={}", done, *counter);
     if done {
         *counter += 1;
