@@ -4,7 +4,9 @@ use bevy::prelude::*;
 use bevy::utils::HashSet;
 use durian::{register_receive, register_send, PacketManager, ServerConfig};
 
-use mangovillage_common::networking::client_packets::{Connect, ConnectPacketBuilder, Disconnect, DisconnectPacketBuilder};
+use mangovillage_common::networking::client_packets::{
+    Connect, ConnectPacketBuilder, Disconnect, DisconnectPacketBuilder, Movement, MovementPacketBuilder,
+};
 use mangovillage_common::networking::server_packets::{ConnectAck, Players, SpawnScene};
 use mangovillage_common::resource::LevelInfo;
 use mangovillage_common::util;
@@ -32,8 +34,10 @@ impl Plugin for ServerPlugin {
 fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     let mut manager = PacketManager::new();
     // register server side packets
-    let receives =
-        util::validate_register_results(false, register_receive!(manager, (Connect, ConnectPacketBuilder), (Disconnect, DisconnectPacketBuilder)));
+    let receives = util::validate_register_results(
+        false,
+        register_receive!(manager, (Connect, ConnectPacketBuilder), (Disconnect, DisconnectPacketBuilder), (Movement, MovementPacketBuilder)),
+    );
     let sends = util::validate_register_results(false, register_send!(manager, ConnectAck, SpawnScene, Players));
     // TODO: better error handling
     if !receives {
@@ -42,7 +46,7 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     if !sends {
         panic!("Failed to register all send packets");
     }
-    let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 2, 3);
+    let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 3, 3);
     server_config.with_keep_alive_interval(Duration::from_secs(30));
     manager.init_server(server_config).unwrap();
 

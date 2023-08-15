@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
+use bevy::window::PrimaryWindow;
 use bevy_rapier3d::prelude::*;
 
+use mangovillage_common::networking::client_packets::Movement;
 use mangovillage_common::networking::server_packets::Player;
 use mangovillage_common::networking::server_packets::{Players, PlayersPacketBuilder};
 use mangovillage_common::player::component::PlayerData;
@@ -15,7 +17,21 @@ pub mod resource;
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, update_players.run_if(in_state(ClientState::Running)));
+        app.add_systems(Update, (update_players, movement).run_if(in_state(ClientState::Running)));
+    }
+}
+
+// TODO: optimize networking
+fn movement(mut manager: ResMut<ClientPacketManager>, mouse_button_input: Res<Input<MouseButton>>, windows: Query<&Window, With<PrimaryWindow>>) {
+    if mouse_button_input.pressed(MouseButton::Left) {
+        let window = windows.single();
+        if let Some(mut position) = window.cursor_position() {
+            // Get position with origin at center of window
+            // y is flipped
+            position.x -= window.width() / 2.0;
+            position.y = window.height() / 2.0 - position.y;
+            manager.send(Movement { translation: position.to_array() }).unwrap();
+        }
     }
 }
 
@@ -58,7 +74,7 @@ fn update_players(
                 .spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() })
                 .insert(PlayerData { id, handle_id: player.handle_id })
                 // Add collider for debug rendering
-                .insert(Collider::cuboid(12.0, 12.0, 12.0));
+                .insert(Collider::capsule_z(5.0, 12.0));
         });
     }
 }

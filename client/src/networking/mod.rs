@@ -7,7 +7,7 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::window::WindowCloseRequested;
 use durian::{register_receive, register_send, ClientConfig, PacketManager};
-use mangovillage_common::networking::client_packets::{Connect, Disconnect};
+use mangovillage_common::networking::client_packets::{Connect, Disconnect, Movement};
 use mangovillage_common::networking::server_packets::{
     ConnectAck, ConnectAckPacketBuilder, Players, PlayersPacketBuilder, SpawnScene, SpawnScenePacketBuilder,
 };
@@ -35,7 +35,7 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
         true,
         register_receive!(manager, (ConnectAck, ConnectAckPacketBuilder), (SpawnScene, SpawnScenePacketBuilder), (Players, PlayersPacketBuilder)),
     );
-    let sends = util::validate_register_results(true, register_send!(manager, Connect, Disconnect));
+    let sends = util::validate_register_results(true, register_send!(manager, Connect, Disconnect, Movement));
     // TODO: better error handling
     if !receives {
         panic!("Failed to register all receive packets");
@@ -43,7 +43,7 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     if !sends {
         panic!("Failed to register all send packets");
     }
-    let mut client_config = ClientConfig::new(client_info.client_addr.clone(), client_info.server_addr.clone(), 3, 2);
+    let mut client_config = ClientConfig::new(client_info.client_addr.clone(), client_info.server_addr.clone(), 3, 3);
     // Server sends keep alive packets
     client_config.with_keep_alive_interval(Duration::from_secs(30));
     manager.init_client(client_config).unwrap();
