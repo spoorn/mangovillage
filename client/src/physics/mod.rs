@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
 
 use mangovillage_common::physics;
 
@@ -8,8 +7,8 @@ use crate::state::ClientState;
 pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((RapierPhysicsPlugin::<NoUserData>::default(), RapierDebugRenderPlugin::default()))
-            .add_systems(Update, load_colliders.run_if(in_state(ClientState::LoadingLevel)));
+        app.add_plugins(bevy_xpbd_3d::prelude::PhysicsPlugins::default())
+            .add_systems(Update, load_colliders.run_if(in_state(ClientState::LoadingPhysics)));
     }
 }
 

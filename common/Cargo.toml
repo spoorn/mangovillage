@@ -9,4 +9,4 @@ edition.workspace = true
 durian.workspace = true
 bevy.workspace = true
 serde.workspace = true
-bevy_rapier3d.workspace = true
+bevy_xpbd_3d.workspace = true

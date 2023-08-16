@@ -1,8 +1,8 @@
+use crate::debug::component::PanOrbitCamera;
+use crate::debug::resource::{MeshVisibility, ZoomSpeed};
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use crate::debug::component::PanOrbitCamera;
-use crate::debug::resource::{MeshVisibility, ZoomSpeed};
 
 const PAN_SPEED: f32 = 1.0;
 const ORBIT_SPEED: f32 = 2.0;
@@ -10,38 +10,32 @@ const ORBIT_SPEED: f32 = 2.0;
 pub struct DebugCameraPlugin;
 impl Plugin for DebugCameraPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(MeshVisibility { visible: true })
+        app.insert_resource(MeshVisibility { visible: true })
             .insert_resource(ZoomSpeed::default())
             .add_systems(Startup, setup_camera)
-            .add_systems(Update, (
-                toggle_visibility,
-                update_zoom_speed,
-                zoom, pan, orbit
-            ));
+            .add_systems(Update, (toggle_visibility, update_zoom_speed, zoom, pan, orbit));
     }
 }
 
 // Z is towards user, Y is vertical, X is horizontal
 fn setup_camera(mut commands: Commands) {
-    let camera_translation = Vec3::new(0.0, 0.0, 20.0);
+    let camera_translation = Vec3::new(0.0, 0.0, 1000.0);
     let focus = Vec3::new(0.0, 0.0, 0.0);
     commands.spawn((
         Camera3dBundle {
-            transform: Transform::from_translation(camera_translation)
-                .looking_at(focus, Vec3::Y),
+            transform: Transform::from_translation(camera_translation).looking_at(focus, Vec3::Y),
             ..default()
         },
-        PanOrbitCamera {
-            focus,
-            radius: (camera_translation - focus).length(),
-            ..default()
-        }
+        PanOrbitCamera { focus, radius: (camera_translation - focus).length(), ..default() },
     ));
 }
 
 /// Toggle visibility of meshes
-fn toggle_visibility(buttons: Res<Input<KeyCode>>, mut query: Query<&mut Visibility, With<Handle<Scene>>>, mut mesh_vis: ResMut<MeshVisibility>) {
+fn toggle_visibility(
+    buttons: Res<Input<KeyCode>>,
+    mut query: Query<&mut Visibility, With<Handle<Scene>>>,
+    mut mesh_vis: ResMut<MeshVisibility>,
+) {
     if buttons.just_pressed(KeyCode::H) {
         mesh_vis.visible = !mesh_vis.visible;
         let visibility = if mesh_vis.visible { Visibility::Inherited } else { Visibility::Hidden };
@@ -54,11 +48,11 @@ fn toggle_visibility(buttons: Res<Input<KeyCode>>, mut query: Query<&mut Visibil
 /// Update camera zoom speed
 fn update_zoom_speed(mut zoom_speed: ResMut<ZoomSpeed>, buttons: Res<Input<KeyCode>>) {
     let mut changed = false;
-    if buttons.just_pressed(KeyCode::BracketLeft) {
-        zoom_speed.speed = f32::max(0.01, zoom_speed.speed - 0.5);
+    if buttons.pressed(KeyCode::BracketLeft) {
+        zoom_speed.speed = f32::max(0.01, zoom_speed.speed - 5.0);
         changed = true;
-    } else if buttons.just_pressed(KeyCode::BracketRight) {
-        zoom_speed.speed += 0.5;
+    } else if buttons.pressed(KeyCode::BracketRight) {
+        zoom_speed.speed += 5.0;
         changed = true;
     }
     if changed {
@@ -66,7 +60,11 @@ fn update_zoom_speed(mut zoom_speed: ResMut<ZoomSpeed>, buttons: Res<Input<KeyCo
     }
 }
 
-fn zoom(mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), With<Camera>>, mut scroll_evr: EventReader<MouseWheel>, zoom_speed: Res<ZoomSpeed>) {
+fn zoom(
+    mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), With<Camera>>,
+    mut scroll_evr: EventReader<MouseWheel>,
+    zoom_speed: Res<ZoomSpeed>,
+) {
     let (mut pan_orbit, mut transform) = camera_query.single_mut();
 
     let scroll: f32 = scroll_evr.iter().map(|ev| ev.y).sum::<f32>() * zoom_speed.speed;
@@ -79,7 +77,12 @@ fn zoom(mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), With<Came
     scroll_evr.clear();
 }
 
-fn pan(windows: Query<&Window, With<PrimaryWindow>>, mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection), With<Camera>>, buttons: Res<Input<MouseButton>>, mut motion_evr: EventReader<MouseMotion>) {
+fn pan(
+    windows: Query<&Window, With<PrimaryWindow>>,
+    mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection), With<Camera>>,
+    buttons: Res<Input<MouseButton>>,
+    mut motion_evr: EventReader<MouseMotion>,
+) {
     if buttons.pressed(MouseButton::Middle) {
         let mut pan = motion_evr.iter().map(|ev| ev.delta).sum::<Vec2>() * PAN_SPEED;
 
@@ -105,7 +108,12 @@ fn pan(windows: Query<&Window, With<PrimaryWindow>>, mut camera_query: Query<(&m
 }
 
 // https://math.stackexchange.com/questions/360286/what-does-multiplication-of-two-quaternions-give
-fn orbit(windows: Query<&Window, With<PrimaryWindow>>, mut camera_query: Query<(&PanOrbitCamera, &mut Transform, &Projection), With<Camera>>, buttons: Res<Input<MouseButton>>, mut motion_evr: EventReader<MouseMotion>) {
+fn orbit(
+    windows: Query<&Window, With<PrimaryWindow>>,
+    mut camera_query: Query<(&PanOrbitCamera, &mut Transform, &Projection), With<Camera>>,
+    buttons: Res<Input<MouseButton>>,
+    mut motion_evr: EventReader<MouseMotion>,
+) {
     if buttons.pressed(MouseButton::Right) {
         let mut rotation_move = motion_evr.iter().map(|ev| ev.delta).sum::<Vec2>() * ORBIT_SPEED;
 
@@ -122,7 +130,11 @@ fn orbit(windows: Query<&Window, With<PrimaryWindow>>, mut camera_query: Query<(
             let delta_x = {
                 //let delta = rotation_move.x / window.x * std::f32::consts::PI * 2.0;
                 let delta = rotation_move.x;
-                if pan_orbit.upside_down { -delta } else { delta }
+                if pan_orbit.upside_down {
+                    -delta
+                } else {
+                    delta
+                }
             };
 
             let delta_y = rotation_move.y; //rotation_move.y / window.y * std::f32::consts::PI;
@@ -133,7 +145,7 @@ fn orbit(windows: Query<&Window, With<PrimaryWindow>>, mut camera_query: Query<(
             let pitch = Quat::from_rotation_x(-delta_y);
             // Rotation matrix rotates the radius vector - right to left
             // https://forum.unity.com/threads/understanding-rotations-in-local-and-world-space-quaternions.153330/
-            // Think of this as composition, 
+            // Think of this as composition,
             // first we rotate the yaw around Z axis, then apply the camera rotation, so it rotates the correct global Z axis
             // second we rotate to where the camera is, then we rotate the pitch so it's the local camera's pitch
             transform.rotation = yaw * transform.rotation; // rotate around global z axis
@@ -157,10 +169,10 @@ fn update_camera_transform(transform: &mut Transform, pan_orbit: &PanOrbitCamera
     // https://forum.unity.com/threads/understanding-rotations-in-local-and-world-space-quaternions.153330/
     // snippet:
     // There is just one really simple rule you need to memorize: Order matters.
-    // 
+    //
     //     Rotate around a local axis: rotation = rotation * Quaternion.AngleAxis(10, Vector3.Up);
     //     Rotate around a world axis: rotation = Quaternion.AngleAxis(10, Vector3.Up) * rotation;
-    // 
+    //
     // So, as you can see above, putting the desired rotation last rotates around a local axis, putting it first rotates around a world axis. There's not much more to know about combining Quaternions.
     //     You also don't need to know the local axis nor transform any desired rotation axis.
     //     Simply chose the right combine order and you're golden.

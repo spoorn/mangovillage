@@ -13,4 +13,4 @@ durian.workspace = true
 derivative.workspace = true
 
 # TODO: Remove
-bevy_rapier3d.workspace = true
+bevy_xpbd_3d = { workspace = true, features = ["debug-plugin"] }

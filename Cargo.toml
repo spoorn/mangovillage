@@ -25,6 +25,7 @@ bevy-inspector-egui = "0.19"
 #bevy_ecs_tilemap = "0.10.0"
 bevy_embedded_assets = "0.8"
 bevy_rapier3d = { version = "0.22.0", features = [ "debug-render-3d" ] }
+bevy_xpbd_3d = { git = "https://github.com/Jondolf/bevy_xpbd.git" }
 bevy_render = "0.11"
 derivative = "2.2.0"
 durian = { path = "../durian/durian", version = "0.4" }

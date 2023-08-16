@@ -5,5 +5,6 @@ pub enum ClientState {
     #[default]
     JoiningServer,
     LoadingLevel,
+    LoadingPhysics,
     Running,
 }

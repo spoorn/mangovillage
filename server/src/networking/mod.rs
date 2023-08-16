@@ -4,7 +4,9 @@ use bevy::prelude::*;
 use bevy::utils::HashSet;
 use durian::{register_receive, register_send, PacketManager, ServerConfig};
 
-use mangovillage_common::networking::client_packets::{Connect, ConnectPacketBuilder, Disconnect, DisconnectPacketBuilder};
+use mangovillage_common::networking::client_packets::{
+    Connect, ConnectPacketBuilder, Disconnect, DisconnectPacketBuilder, Movement, MovementPacketBuilder,
+};
 use mangovillage_common::networking::server_packets::{ConnectAck, Players, SpawnScene};
 use mangovillage_common::resource::LevelInfo;
 use mangovillage_common::util;
@@ -32,8 +34,15 @@ impl Plugin for ServerPlugin {
 fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     let mut manager = PacketManager::new();
     // register server side packets
-    let receives =
-        util::validate_register_results(false, register_receive!(manager, (Connect, ConnectPacketBuilder), (Disconnect, DisconnectPacketBuilder)));
+    let receives = util::validate_register_results(
+        false,
+        register_receive!(
+            manager,
+            (Connect, ConnectPacketBuilder),
+            (Disconnect, DisconnectPacketBuilder),
+            (Movement, MovementPacketBuilder)
+        ),
+    );
     let sends = util::validate_register_results(false, register_send!(manager, ConnectAck, SpawnScene, Players));
     // TODO: better error handling
     if !receives {
@@ -42,7 +51,7 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     if !sends {
         panic!("Failed to register all send packets");
     }
-    let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 2, 3);
+    let mut server_config = ServerConfig::new(server_info.server_addr.clone(), 0, None, 3, 3);
     server_config.with_keep_alive_interval(Duration::from_secs(30));
     manager.init_server(server_config).unwrap();
 
@@ -56,7 +65,12 @@ fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Comma
     for (addr, leaves) in connect_packets.into_iter() {
         if matches!(leaves, Some(connects) if !connects.is_empty()) {
             info!("[server] Client with addr={} connected", addr);
-            player::spawn_player(&mut commands, addr.clone(), manager.get_client_id(addr.clone()).unwrap(), &asset_server);
+            player::spawn_player(
+                &mut commands,
+                addr.clone(),
+                manager.get_client_id(addr.clone()).unwrap(),
+                &asset_server,
+            );
             let client_id = manager.get_client_id(&addr).unwrap();
             info!("Sending ConnectAck to client id={}, addr={}", client_id, addr);
             manager.send_to(&addr, ConnectAck { id: client_id }).unwrap();
@@ -67,9 +81,9 @@ fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Comma
                     addr,
                     SpawnScene {
                         level: LevelInfo {
-                            handle_id: "models/volcano_island_lowpoly/scene.gltf#Scene0".to_string(),
+                            handle_id: "models/volcano_island_lowpoly/lowpolyisland.glb#Scene0".to_string(),
                             scene_transform: [0.0, 0.0, 0.0, std::f32::consts::PI / 2.0],
-                            scale: 0.005,
+                            scale: 1.0,
                         },
                     },
                 )
@@ -78,7 +92,11 @@ fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Comma
     }
 }
 
-fn handle_leaves(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, players_query: Query<(Entity, &ServerPlayer)>) {
+fn handle_leaves(
+    mut manager: ResMut<ServerPacketManager>,
+    mut commands: Commands,
+    players_query: Query<(Entity, &ServerPlayer)>,
+) {
     let leave_packets = manager.received_all::<Disconnect, DisconnectPacketBuilder>(false).unwrap();
     let mut players_to_remove = HashSet::new();
 

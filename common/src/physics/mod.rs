@@ -1,7 +1,7 @@
-pub mod component;
-
 use bevy::prelude::{Assets, Commands, Entity, Handle, Mesh, Res};
-use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
+use bevy_xpbd_3d::prelude::Collider;
+
+pub mod component;
 
 /// Spawn colliders for meshes
 ///
@@ -15,7 +15,7 @@ where
 {
     let mut done = false;
     for (entity, mesh) in mesh_query {
-        let collider = Collider::from_bevy_mesh(meshes.get(&mesh).unwrap(), &ComputedColliderShape::TriMesh);
+        let collider = Collider::trimesh_from_bevy_mesh(meshes.get(&mesh).unwrap());
         if let Some(collider) = collider {
             commands.entity(entity).insert(collider);
             done = true;

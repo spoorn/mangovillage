@@ -24,7 +24,7 @@ fn spawn_scene(
         let scene = spawn_scenes.last().unwrap();
         info!("[client] Spawning level {}", scene.level.handle_id);
         world::load_level(&mut commands, &asset_server, &scene.level);
-        info!("[client] Transitioning state to LoadingLevel");
-        client_state.set(ClientState::LoadingLevel);
+        info!("[client] Transitioning state to LoadingPhysics");
+        client_state.set(ClientState::LoadingPhysics);
     }
 }

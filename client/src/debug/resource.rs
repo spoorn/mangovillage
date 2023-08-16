@@ -5,12 +5,12 @@ use derivative::Derivative;
 #[derive(Derivative, Resource)]
 #[derivative(Default)]
 pub struct ZoomSpeed {
-    #[derivative(Default(value="5.0"))]
-    pub speed: f32
+    #[derivative(Default(value = "50.0"))]
+    pub speed: f32,
 }
 
 /// Visibility of meshes
 #[derive(Resource)]
 pub struct MeshVisibility {
-    pub visible: bool
+    pub visible: bool,
 }
