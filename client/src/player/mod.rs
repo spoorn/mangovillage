@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use bevy::window::PrimaryWindow;
+use bevy_xpbd_3d::math::Vector;
 use bevy_xpbd_3d::prelude::*;
 
 use mangovillage_common::networking::client_packets::Movement;
@@ -79,7 +80,11 @@ fn update_players(
                 .spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() })
                 .insert(PlayerData { id, handle_id: player.handle_id })
                 // Add collider for debug rendering
-                .insert(Collider::capsule(10.0, 12.0));
+                .insert(Collider::capsule_endpoints(
+                    (Vector::Z * 10.0 * 0.5).into(),
+                    (Vector::NEG_Z * 10.0 * 0.5).into(),
+                    12.0,
+                ));
         });
     }
 }

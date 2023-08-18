@@ -15,7 +15,7 @@ where
 {
     let mut done = false;
     for (entity, mesh) in mesh_query {
-        let collider = Collider::trimesh_from_bevy_mesh(meshes.get(&mesh).unwrap());
+        let collider = Collider::convex_decomposition_from_bevy_mesh(meshes.get(&mesh).unwrap());
         if let Some(collider) = collider {
             commands.entity(entity).insert(RigidBody::Static).insert(collider);
             done = true;
