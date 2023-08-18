@@ -22,7 +22,7 @@ fn spawn_scene(
     let spawn_scene_packets = manager.received::<SpawnScene, SpawnScenePacketBuilder>(false).unwrap();
     if let Some(spawn_scenes) = spawn_scene_packets {
         let scene = spawn_scenes.last().unwrap();
-        info!("[client] Spawning level {}", scene.level.handle_id);
+        info!("[client] Spawning level {:?}", scene.level);
         world::load_level(&mut commands, &asset_server, &scene.level);
         info!("[client] Transitioning state to LoadingPhysics");
         client_state.set(ClientState::LoadingPhysics);

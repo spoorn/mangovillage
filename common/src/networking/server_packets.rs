@@ -11,6 +11,7 @@ pub struct ConnectAck {
 }
 
 #[bincode_packet]
+#[derive(Debug)]
 pub struct SpawnScene {
     pub level: LevelInfo,
 }

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
-use bevy_xpbd_3d::math::{Quaternion, Vector};
+use bevy_xpbd_3d::math::{Quaternion, Scalar, Vector};
+use bevy_xpbd_3d::{PhysicsSchedule, PhysicsStepSet, SubstepSchedule, SubstepSet};
 use bevy_xpbd_3d::prelude::*;
 
 use mangovillage_common::networking::client_packets::{Movement, MovementPacketBuilder};
@@ -14,12 +15,15 @@ use crate::state::ServerState;
 
 pub mod component;
 
-const PLAYER_MOVEMENT_SPEED: f32 = 100.0;
+const PLAYER_MOVEMENT_SPEED: f32 = 2000.0;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (players_move, broadcast_players).run_if(in_state(ServerState::Running)));
+        app.add_systems(Update, broadcast_players.run_if(in_state(ServerState::Running)))
+            .add_systems(PhysicsSchedule, players_move.run_if(in_state(ServerState::Running)).before(PhysicsStepSet::BroadPhase))
+            // Run collision handling in substep schedule
+            .add_systems(SubstepSchedule, player_collision.run_if(in_state(ServerState::Running)).in_set(SubstepSet::SolveUserConstraints));
     }
 }
 
@@ -60,15 +64,16 @@ fn players_move(
         if shape_hits.is_empty() {
             // If not grounded, snap to ground
             linear_velocity.z = -100.0;
+            println!("falling");
         } else {
-            let shape_hit = shape_hits.iter().last().unwrap();
+            //let shape_hit = shape_hits.iter().last().unwrap();
             // point2 and point1 are actually flipped
             // See https://discord.com/channels/691052431525675048/1124043933886976171/1141129763763781722
-            let caster_global_witness = global_transforms.get(entity).unwrap().translation() + shape_hit.point2;
-            let collider_global_witness =
-                global_transforms.get(shape_hit.entity).unwrap().translation() + shape_hit.point1;
-            debug!("Caster collision translation: {:?}", caster_global_witness);
-            debug!("Collider collision translation: {:?}", collider_global_witness);
+            // let caster_global_witness = global_transforms.get(entity).unwrap().translation() + shape_hit.point2;
+            // let collider_global_witness =
+            //     global_transforms.get(shape_hit.entity).unwrap().translation() + shape_hit.point1;
+            //debug!("Caster collision translation: {:?}", caster_global_witness);
+            //debug!("Collider collision translation: {:?}", collider_global_witness);
             linear_velocity.z = 0.0;
         }
         //println!("### vel: {:?}, pos: {:?}", linear_velocity, position);
@@ -134,6 +139,79 @@ fn players_move(
         // }
     }
     //std::thread::sleep(Duration::from_secs(1));
+}
+
+fn player_collision(collisions: Res<Collisions>, mut bodies: Query<(&RigidBody, &mut Position)>) {
+    // Iterate through collisions and move the kinematic body to resolve penetration
+    for contacts in collisions.iter() {
+        // If the collision didn't happen during this substep, skip the collision
+        if !contacts.during_current_substep {
+            continue;
+        }
+
+        println!("contact {:?}, {:?}, {:?}", contacts.entity1, contacts.entity2, contacts);
+        if let Ok([(rb1, mut position1), (rb2, mut position2)]) =
+            bodies.get_many_mut([contacts.entity1, contacts.entity2])
+        {
+            println!("{:?}, {:?}", rb1, rb2);
+
+            for manifold in contacts.manifolds.iter() {
+                for contact in manifold.contacts.iter() {
+                    if contact.penetration <= Scalar::EPSILON {
+                        continue;
+                    }
+                    // Contact normal Y and Z are flipped for some reason
+                    if rb1.is_kinematic() && rb2.is_static() {
+                        debug!("rb1 kinematic {:?}, rb2 static {:?}, position1 before {:?}", contacts.entity1, contacts.entity2, position1);
+                        // Only apply vertical contacts against player, and scale based on reversed angle
+                        let angle = contact.normal.angle_between(Vector::Z);
+                        if angle < 85.0 {
+                            position1.0.z -= contact.normal.y * contact.penetration;
+                        } else {
+                            position1.0.x -= contact.normal.x * contact.penetration;
+                            position1.0.y -= contact.normal.z * contact.penetration;
+                        }
+                        debug!("rb1 kinematic {:?}, rb2 static {:?}, position1 after {:?}", contacts.entity1, contacts.entity2, position1);
+                    } else if rb1.is_static() && rb2.is_kinematic() {
+                        debug!("rb2 kinematic {:?}, rb1 static {:?}, position2 before {:?}", contacts.entity2, contacts.entity1, position2);
+                        // Only apply vertical contacts against player, and scale based on reversed angle
+                        let angle = contact.normal.angle_between(Vector::Z);
+                        println!("angle: {}", angle);
+                        if angle < 85.0 {
+                            position2.0.z += contact.normal.y * contact.penetration;
+                        } else {
+                            position2.0.x += contact.normal.x * contact.penetration;
+                            position2.0.y += contact.normal.z * contact.penetration;
+                        }
+                        debug!("rb2 kinematic {:?}, rb1 static {:?}, position2 after {:?}", contacts.entity2, contacts.entity1, position2);
+                    }
+                }
+            }
+        }
+    }
+    // Iterate through collisions and move the kinematic body to resolve penetration
+    // for contacts in collisions.iter() {
+    //     // If the collision didn't happen during this substep, skip the collision
+    //     if !contacts.during_current_substep {
+    //         continue;
+    //     }
+    //     if let Ok([(rb1, mut position1), (rb2, mut position2)]) =
+    //         bodies.get_many_mut([contacts.entity1, contacts.entity2])
+    //     {
+    //         for manifold in contacts.manifolds.iter() {
+    //             for contact in manifold.contacts.iter() {
+    //                 if contact.penetration <= Scalar::EPSILON {
+    //                     continue;
+    //                 }
+    //                 if rb1.is_kinematic() && !rb2.is_kinematic() {
+    //                     position1.0 += contact.normal * contact.penetration;
+    //                 } else if rb2.is_kinematic() && !rb1.is_kinematic() {
+    //                     position2.0 += contact.normal * contact.penetration;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 fn broadcast_players(mut manager: ResMut<ServerPacketManager>, player_query: Query<(&PlayerData, &Transform)>) {

@@ -1,5 +1,5 @@
 use bevy::prelude::{Assets, Commands, Entity, Handle, Mesh, Res};
-use bevy_xpbd_3d::prelude::Collider;
+use bevy_xpbd_3d::prelude::{Collider, RigidBody};
 
 pub mod component;
 
@@ -17,7 +17,7 @@ where
     for (entity, mesh) in mesh_query {
         let collider = Collider::trimesh_from_bevy_mesh(meshes.get(&mesh).unwrap());
         if let Some(collider) = collider {
-            commands.entity(entity).insert(collider);
+            commands.entity(entity).insert(RigidBody::Static).insert(collider);
             done = true;
         }
     }
