@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use bevy::window::PrimaryWindow;
-use bevy_xpbd_3d::math::Vector;
-use bevy_xpbd_3d::prelude::*;
 
 use mangovillage_common::networking::client_packets::Movement;
 use mangovillage_common::networking::server_packets::Player;
 use mangovillage_common::networking::server_packets::{Players, PlayersPacketBuilder};
+use mangovillage_common::player;
 use mangovillage_common::player::component::PlayerData;
 use mangovillage_common::player::PLAYER_MODEL_HANDLE_IDS;
+use player::get_player_collider;
 
 use crate::networking::resource::ClientPacketManager;
 use crate::state::ClientState;
@@ -23,11 +23,7 @@ impl Plugin for PlayerPlugin {
 }
 
 // TODO: optimize networking
-fn movement(
-    mut manager: ResMut<ClientPacketManager>,
-    mouse_button_input: Res<Input<MouseButton>>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-) {
+fn movement(mut manager: ResMut<ClientPacketManager>, mouse_button_input: Res<Input<MouseButton>>, windows: Query<&Window, With<PrimaryWindow>>) {
     if mouse_button_input.pressed(MouseButton::Left) {
         let window = windows.single();
         if let Some(mut position) = window.cursor_position() {
@@ -51,8 +47,7 @@ fn update_players(
         // Only care about last packet
         let server_players = server_players.swap_remove(server_players.len() - 1);
         // Find differences and intersections
-        let mut server_players_map: HashMap<u32, Player> =
-            server_players.players.into_iter().map(|player| (player.id, player)).collect();
+        let mut server_players_map: HashMap<u32, Player> = server_players.players.into_iter().map(|player| (player.id, player)).collect();
 
         for (entity, client_player_data, mut transform) in players_query.iter_mut() {
             if let Some(server_player_info) = server_players_map.remove(&client_player_data.id) {
@@ -72,19 +67,15 @@ fn update_players(
         // New players
         server_players_map.into_iter().for_each(|(id, player)| {
             debug!("Adding new player {}", id);
-            let mut transform = Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2])
-                .with_scale(Vec3::splat(player.scale));
+            let mut transform =
+                Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2]).with_scale(Vec3::splat(player.scale));
             transform.rotate_x(player.transform[3]);
             let player_model = PLAYER_MODEL_HANDLE_IDS[player.handle_id as usize];
             commands
                 .spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() })
                 .insert(PlayerData { id, handle_id: player.handle_id })
                 // Add collider for debug rendering
-                .insert(Collider::capsule_endpoints(
-                    (Vector::Z * 10.0 * 0.5).into(),
-                    (Vector::NEG_Z * 10.0 * 0.5).into(),
-                    12.0,
-                ));
+                .insert(get_player_collider());
         });
     }
 }

@@ -1,5 +1,5 @@
 use bevy::prelude::{Assets, Commands, Entity, Handle, Mesh, Res};
-use bevy_xpbd_3d::prelude::{Collider, RigidBody};
+use bevy_rapier3d::prelude::{Collider, ComputedColliderShape, RigidBody};
 
 pub mod component;
 
@@ -15,9 +15,9 @@ where
 {
     let mut done = false;
     for (entity, mesh) in mesh_query {
-        let collider = Collider::convex_decomposition_from_bevy_mesh(meshes.get(&mesh).unwrap());
+        let collider = Collider::from_bevy_mesh(meshes.get(&mesh).unwrap(), &ComputedColliderShape::TriMesh);
         if let Some(collider) = collider {
-            commands.entity(entity).insert(RigidBody::Static).insert(collider);
+            commands.entity(entity).insert(RigidBody::Fixed).insert(collider);
             done = true;
         }
     }

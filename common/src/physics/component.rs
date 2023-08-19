@@ -1,5 +1,5 @@
 use bevy::prelude::Bundle;
-use bevy_xpbd_3d::prelude::*;
+use bevy_rapier3d::prelude::*;
 
 #[derive(Clone, Debug, Default, Bundle)]
 pub struct ColliderBundle {

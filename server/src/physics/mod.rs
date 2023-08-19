@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_xpbd_3d::prelude::Gravity;
+use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use mangovillage_common::physics;
 
 use crate::state::ServerState;
@@ -7,8 +7,8 @@ use crate::state::ServerState;
 pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(bevy_xpbd_3d::prelude::PhysicsPlugins::default())
-            .insert_resource(Gravity(Vec3::NEG_Z))
+        app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+            .insert_resource(RapierConfiguration { gravity: Vec3::new(0.0, 0.0, -100.0), ..default() })
             .add_systems(Update, load_colliders.run_if(in_state(ServerState::LoadPhysics)));
     }
 }
