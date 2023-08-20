@@ -1,5 +1,5 @@
 use crate::debug::component::PanOrbitCamera;
-use crate::debug::resource::{MeshVisibility, ZoomSpeed};
+use crate::debug::resource::{CameraSpeed, MeshVisibility};
 use crate::state::CameraState;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
@@ -14,10 +14,10 @@ impl Plugin for DebugCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<CameraState>()
             .insert_resource(MeshVisibility { visible: true })
-            .insert_resource(ZoomSpeed::default())
+            .insert_resource(CameraSpeed::default())
             .add_systems(Startup, setup_camera)
             .add_systems(Update, toggle_debug)
-            .add_systems(Update, (toggle_visibility, update_zoom_speed, zoom, pan, orbit).run_if(in_state(CameraState::Debug)));
+            .add_systems(Update, (toggle_visibility, update_zoom_speed, zoom, pan, orbit, movement).run_if(in_state(CameraState::Debug)));
     }
 }
 
@@ -72,6 +72,7 @@ fn toggle_visibility(
     }
 }
 
+/// Helper function to set mesh visibilities from a query, based on visible flag
 fn set_mesh_visibilities(mesh_query: &mut Query<&mut Visibility, With<Handle<Scene>>>, visible: bool) {
     let visibility = if visible { Visibility::Inherited } else { Visibility::Hidden };
     for mut vis in mesh_query.iter_mut() {
@@ -80,28 +81,70 @@ fn set_mesh_visibilities(mesh_query: &mut Query<&mut Visibility, With<Handle<Sce
 }
 
 /// Update camera zoom speed
-fn update_zoom_speed(mut zoom_speed: ResMut<ZoomSpeed>, buttons: Res<Input<KeyCode>>) {
+fn update_zoom_speed(mut camera_speed: ResMut<CameraSpeed>, buttons: Res<Input<KeyCode>>) {
     let mut changed = false;
     if buttons.pressed(KeyCode::BracketLeft) {
-        zoom_speed.speed = f32::max(0.01, zoom_speed.speed - 5.0);
+        camera_speed.zoom_speed = f32::max(0.01, camera_speed.zoom_speed - 3.0);
+        camera_speed.move_speed = f32::max(0.0001, camera_speed.move_speed - 0.0001);
         changed = true;
     } else if buttons.pressed(KeyCode::BracketRight) {
-        zoom_speed.speed += 5.0;
+        camera_speed.zoom_speed += 3.0;
+        camera_speed.move_speed += 0.0001;
         changed = true;
     }
     if changed {
-        debug!("Update zoom speed to {}", zoom_speed.speed);
+        debug!("Update camera zoom speed to {}, camera move speed to {}", camera_speed.zoom_speed, camera_speed.move_speed);
+    }
+}
+
+fn movement(buttons: Res<Input<KeyCode>>, mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), With<Camera>>, cam_speed: Res<CameraSpeed>) {
+    let mut up = 0.0;
+    let mut forward = 0.0;
+    let mut side = 0.0;
+
+    if buttons.pressed(KeyCode::W) {
+        forward -= cam_speed.move_speed;
+    }
+    if buttons.pressed(KeyCode::S) {
+        forward += cam_speed.move_speed;
+    }
+    if buttons.pressed(KeyCode::D) {
+        side += cam_speed.move_speed;
+    }
+    if buttons.pressed(KeyCode::A) {
+        side -= cam_speed.move_speed;
+    }
+    if buttons.pressed(KeyCode::E) {
+        up += cam_speed.move_speed;
+    }
+    if buttons.pressed(KeyCode::Q) {
+        up -= cam_speed.move_speed;
+    }
+
+    let (mut pan_orbit, mut transform) = camera_query.single_mut();
+    // translate by local axes and turn into vectors
+    // reuse zoom speed, but scale back initial value to 1.0
+    // precision shmecision
+    if side != 0.0 || up != 0.0 || forward != 0.0 {
+        let side = transform.rotation * Vec3::X * side;
+        let up = transform.rotation * Vec3::Y * up;
+        let forward = transform.rotation * Vec3::Z * forward;
+        // make panning proportional to distance away from focus point
+        let translation = (side + up + forward) * pan_orbit.radius;
+        pan_orbit.focus += translation;
+
+        update_camera_transform(&mut transform, &pan_orbit);
     }
 }
 
 fn zoom(
     mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), With<Camera>>,
     mut scroll_evr: EventReader<MouseWheel>,
-    zoom_speed: Res<ZoomSpeed>,
+    cam_speed: Res<CameraSpeed>,
 ) {
     let (mut pan_orbit, mut transform) = camera_query.single_mut();
 
-    let scroll: f32 = scroll_evr.iter().map(|ev| ev.y).sum::<f32>() * zoom_speed.speed;
+    let scroll: f32 = scroll_evr.iter().map(|ev| ev.y).sum::<f32>() * cam_speed.zoom_speed;
 
     if scroll.abs() > 0.0 {
         pan_orbit.radius = f32::max(pan_orbit.radius - scroll, 0.05);
