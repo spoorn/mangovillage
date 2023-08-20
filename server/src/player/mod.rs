@@ -76,7 +76,7 @@ fn player_collision(
         //println!("output: {:?}", controller_output);
         // Shape cast to check if we are grounded
         // We do this manually instead of `output.grounded` so the grounded check is always consistent
-        if rapier_context.cast_shape(transform.translation, transform.rotation, Vec3::NEG_Z, collider, 0.11, QueryFilter::only_fixed()).is_none() {
+        if rapier_context.cast_shape(transform.translation, transform.rotation, Vec3::NEG_Z, collider, 0.69, QueryFilter::only_fixed()).is_none() {
             match controller.translation {
                 None => controller.translation = Some(Vec3::NEG_Z * GRAVITY_STEP_SPEED * time.delta_seconds()),
                 Some(mut translation) => translation.z -= GRAVITY_STEP_SPEED * time.delta_seconds(),
@@ -90,7 +90,25 @@ fn player_collision(
                     if collision.toi.status == TOIStatus::Converged {
                         let penetration = collision.translation_remaining.length();
                         let angle = collision.toi.normal1.angle_between(Vec3::Z);
-                        let dz = (collision.toi.normal1.z * penetration).abs();
+                        // Since we only allow player controlled movement to be horizontal, penetration at this point is
+                        // also always horizontal.  We want to find the vertical distance to pop up from the end of the
+                        // penetration, assuming the normal surface is flat, it will pop us out of the current collision.
+                        // let p = penetration length
+                        // let h = vertical distance we want to pop out of
+                        // let theta = angle from normal vector to +Z
+                        // based on triangle symmetry, we can get
+                        //      h = p * tan(theta)
+                        // However, if we are at a low enough angle -> 0, tan function will start to decrease and at 0
+                        // this function will just give us 0 which is incorrect.  If there is penetration when
+                        // theta == 0, we are penetrating vertically, which shouldn't happen, but if it does, just keep
+                        //      h = p
+                        // to pop up the full penetration length.
+                        let mut dz = penetration;
+                        if angle > 10.0 {
+                            dz *= angle.tan()
+                        }
+                        // Add a small offset buffer so player floats slightly above ground
+                        dz += 0.69;
                         match controller.translation {
                             None => controller.translation = Some(Vec3::new(0.0, 0.0, dz)),
                             Some(mut translation) => {
@@ -143,11 +161,17 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, asset_server
                 ..default()
             },
         })
+        // Our collision system manually handles a lot of what the character controller gives us, so we have more custom
+        // tuning and control over parameters and behavior.  The defaults don't work so well with dramatic terrains.
+        // This is mainly here so we can collect and act on collisions.
         .insert(KinematicCharacterController {
             up: Vec3::Z,
-            offset: CharacterLength::Absolute(0.1),
+            // Use a low value because our collision system above already factors in an offset
+            offset: CharacterLength::Absolute(0.01),
             slide: false,
-            //autostep: None,
+            // Our collision system uses normal forces to automatically do autostep on slopes.
+            // We can add this back or modify the collision system to add step heights if needed
+            autostep: None,
             // autostep: Some(CharacterAutostep {
             //     max_height: CharacterLength::Absolute(200.0),
             //     min_width: CharacterLength::Absolute(200.0),
@@ -156,7 +180,8 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, asset_server
             max_slope_climb_angle: 85.0,
             min_slope_slide_angle: 0.0,
             apply_impulse_to_dynamic_bodies: false,
-            snap_to_ground: Some(CharacterLength::Absolute(10000.0)),
+            // Our collision system uses gravity to push to ground already
+            snap_to_ground: None, //Some(CharacterLength::Absolute(10000.0)),
             filter_flags: QueryFilterFlags::ONLY_FIXED,
             ..default()
         });
