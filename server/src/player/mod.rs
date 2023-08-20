@@ -109,6 +109,10 @@ fn player_collision(
                         }
                         // Add a small offset buffer so player floats slightly above ground
                         dz += 0.69;
+                        // If collided entity is above, push it down
+                        if collision.toi.normal1.z < 0.0 {
+                            dz = -dz;
+                        }
                         match controller.translation {
                             None => controller.translation = Some(Vec3::new(0.0, 0.0, dz)),
                             Some(mut translation) => {
