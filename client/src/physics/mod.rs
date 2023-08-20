@@ -8,7 +8,7 @@ use crate::state::ClientState;
 pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((RapierPhysicsPlugin::<NoUserData>::default(), RapierDebugRenderPlugin::default()))
+        app.add_plugins((RapierPhysicsPlugin::<NoUserData>::default(), RapierDebugRenderPlugin { enabled: true, ..default() }))
             .add_systems(Update, load_colliders.run_if(in_state(ClientState::LoadingPhysics)));
     }
 }

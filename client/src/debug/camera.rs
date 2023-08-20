@@ -1,8 +1,10 @@
 use crate::debug::component::PanOrbitCamera;
 use crate::debug::resource::{MeshVisibility, ZoomSpeed};
+use crate::state::CameraState;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+use bevy_rapier3d::prelude::DebugRenderContext;
 
 const PAN_SPEED: f32 = 1.0;
 const ORBIT_SPEED: f32 = 2.0;
@@ -10,10 +12,12 @@ const ORBIT_SPEED: f32 = 2.0;
 pub struct DebugCameraPlugin;
 impl Plugin for DebugCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(MeshVisibility { visible: true })
+        app.add_state::<CameraState>()
+            .insert_resource(MeshVisibility { visible: true })
             .insert_resource(ZoomSpeed::default())
             .add_systems(Startup, setup_camera)
-            .add_systems(Update, (toggle_visibility, update_zoom_speed, zoom, pan, orbit));
+            .add_systems(Update, toggle_debug)
+            .add_systems(Update, (toggle_visibility, update_zoom_speed, zoom, pan, orbit).run_if(in_state(CameraState::Debug)));
     }
 }
 
@@ -22,26 +26,56 @@ fn setup_camera(mut commands: Commands) {
     let camera_translation = Vec3::new(0.0, 0.0, 1000.0);
     let focus = Vec3::new(0.0, 0.0, 0.0);
     commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_translation(camera_translation).looking_at(focus, Vec3::Y),
-            ..default()
-        },
+        Camera3dBundle { transform: Transform::from_translation(camera_translation).looking_at(focus, Vec3::Y), ..default() },
         PanOrbitCamera { focus, radius: (camera_translation - focus).length(), ..default() },
     ));
 }
 
-/// Toggle visibility of meshes
+/// Toggle debug camera state
+fn toggle_debug(
+    buttons: Res<Input<KeyCode>>,
+    camera_state: Res<State<CameraState>>,
+    mut next_camera_state: ResMut<NextState<CameraState>>,
+    mut mesh_vis: ResMut<MeshVisibility>,
+    mut mesh_query: Query<&mut Visibility, With<Handle<Scene>>>,
+    mut debug_render_context: ResMut<DebugRenderContext>,
+) {
+    if buttons.just_pressed(KeyCode::F1) {
+        match camera_state.get() {
+            CameraState::Locked => {
+                next_camera_state.set(CameraState::Debug);
+            }
+            CameraState::Debug => {
+                mesh_vis.visible = true;
+                set_mesh_visibilities(&mut mesh_query, mesh_vis.visible);
+                debug_render_context.enabled = false;
+                next_camera_state.set(CameraState::Locked);
+            }
+        }
+    }
+}
+
+/// Toggle visibility of meshes and debug render lines
 fn toggle_visibility(
     buttons: Res<Input<KeyCode>>,
-    mut query: Query<&mut Visibility, With<Handle<Scene>>>,
+    mut mesh_query: Query<&mut Visibility, With<Handle<Scene>>>,
     mut mesh_vis: ResMut<MeshVisibility>,
+    mut debug_render_context: ResMut<DebugRenderContext>,
 ) {
-    if buttons.just_pressed(KeyCode::H) {
+    if buttons.just_pressed(KeyCode::F2) {
         mesh_vis.visible = !mesh_vis.visible;
-        let visibility = if mesh_vis.visible { Visibility::Inherited } else { Visibility::Hidden };
-        for mut vis in query.iter_mut() {
-            vis.apply(&visibility);
-        }
+        set_mesh_visibilities(&mut mesh_query, mesh_vis.visible);
+    }
+
+    if buttons.just_pressed(KeyCode::F3) {
+        debug_render_context.enabled = !debug_render_context.enabled;
+    }
+}
+
+fn set_mesh_visibilities(mesh_query: &mut Query<&mut Visibility, With<Handle<Scene>>>, visible: bool) {
+    let visibility = if visible { Visibility::Inherited } else { Visibility::Hidden };
+    for mut vis in mesh_query.iter_mut() {
+        vis.apply(&visibility);
     }
 }
 
@@ -114,7 +148,7 @@ fn orbit(
     buttons: Res<Input<MouseButton>>,
     mut motion_evr: EventReader<MouseMotion>,
 ) {
-    if buttons.pressed(MouseButton::Right) {
+    if buttons.pressed(MouseButton::Left) {
         let mut rotation_move = motion_evr.iter().map(|ev| ev.delta).sum::<Vec2>() * ORBIT_SPEED;
 
         if rotation_move.length_squared() > 0.0 {
@@ -137,10 +171,12 @@ fn orbit(
                 }
             };
 
-            let delta_y = rotation_move.y; //rotation_move.y / window.y * std::f32::consts::PI;
+            //rotation_move.y / window.y * std::f32::consts::PI;
+            let delta_y = rotation_move.y;
             // negative to flip direction
             // yaw around Z axis
-            let yaw = Quat::from_rotation_z(-delta_x);  // Top down view where +Z is camera view, so we rotate/spin around Z
+            // Top down view where +Z is camera view, so we rotate/spin around Z
+            let yaw = Quat::from_rotation_z(-delta_x);
             // pitch around X axis
             let pitch = Quat::from_rotation_x(-delta_y);
             // Rotation matrix rotates the radius vector - right to left

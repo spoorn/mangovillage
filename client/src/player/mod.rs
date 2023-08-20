@@ -24,7 +24,7 @@ impl Plugin for PlayerPlugin {
 
 // TODO: optimize networking
 fn movement(mut manager: ResMut<ClientPacketManager>, mouse_button_input: Res<Input<MouseButton>>, windows: Query<&Window, With<PrimaryWindow>>) {
-    if mouse_button_input.pressed(MouseButton::Left) {
+    if mouse_button_input.pressed(MouseButton::Right) {
         let window = windows.single();
         if let Some(mut position) = window.cursor_position() {
             // Get position with origin at center of window
