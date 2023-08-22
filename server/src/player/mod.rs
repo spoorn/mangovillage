@@ -1,3 +1,4 @@
+use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 use bevy_rapier3d::control::KinematicCharacterControllerOutput;
 use bevy_rapier3d::prelude::{
@@ -9,7 +10,7 @@ use mangovillage_common::networking::server_packets::{Player, Players};
 use mangovillage_common::physics::component::ColliderBundle;
 use mangovillage_common::player;
 use mangovillage_common::player::component::PlayerData;
-use mangovillage_common::player::PLAYER_MODEL_HANDLE_IDS;
+use mangovillage_common::player::{set_player_rotation, PLAYER_MODEL_HANDLE_IDS};
 use player::get_player_collider;
 
 use crate::networking::resource::ServerPacketManager;
@@ -32,7 +33,7 @@ impl Plugin for PlayerPlugin {
 
 fn players_move(
     mut manager: ResMut<ServerPacketManager>,
-    mut players: Query<(&ServerPlayer, &PlayerData, &mut KinematicCharacterController)>,
+    mut players: Query<(&mut Transform, &ServerPlayer, &PlayerData, &mut KinematicCharacterController)>,
     time: Res<Time>,
 ) {
     let move_packets = manager.received_all::<Movement, MovementPacketBuilder>(false).unwrap();
@@ -41,7 +42,7 @@ fn players_move(
             let movement = move_packet.last().unwrap();
             // Find player
             let mut found = false;
-            for (server_player, player_data, mut controller) in players.iter_mut() {
+            for (mut transform, server_player, player_data, mut controller) in players.iter_mut() {
                 if server_player.addr == addr && player_data.id == manager.get_client_id(&addr).unwrap() {
                     found = true;
                     let movement_vec = Vec2::new(movement.translation[0], movement.translation[1]).normalize();
@@ -54,6 +55,8 @@ fn players_move(
                             translation.y += dy;
                         }
                     };
+                    set_player_rotation(controller.translation.unwrap().xy(), &mut transform);
+                    //println!("move: {:?}", controller.translation);
                     break;
                 }
             }
@@ -136,6 +139,7 @@ fn player_collision(
                 }
             }
         }
+        //println!("after collision: {:?}", controller.translation);
     }
 }
 
@@ -147,7 +151,7 @@ fn broadcast_players(mut manager: ResMut<ServerPacketManager>, player_query: Que
         .map(|(player_data, transform)| Player {
             id: player_data.id,
             handle_id: player_data.handle_id,
-            transform: [transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x],
+            transform: [transform.translation.x, transform.translation.y, transform.translation.z],
             scale: transform.scale.x,
         })
         .collect();
@@ -158,7 +162,7 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, asset_server
     info!("[server] Spawning player with addr={}, id={}", addr, id);
     let player_data = PlayerData { id, handle_id: 0 };
     let mut transform = Transform::from_xyz(-10.0, 0.0, 150.0).with_scale(Vec3::splat(1.0));
-    transform.rotate_x(0.0);
+    //transform.look_at(Vec3::NEG_Y, Vec3::Z);
     let player_model = PLAYER_MODEL_HANDLE_IDS[player_data.handle_id as usize];
     let entity = commands.spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() }).id();
     debug!("Player EntityId={:?}", entity);

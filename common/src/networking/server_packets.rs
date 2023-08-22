@@ -27,7 +27,7 @@ pub struct Player {
     /// Client's server ID
     pub id: u32,
     pub handle_id: u8,
-    // x, y, z, x-rotation
-    pub transform: [f32; 4],
+    // x, y, z
+    pub transform: [f32; 3],
     pub scale: f32,
 }

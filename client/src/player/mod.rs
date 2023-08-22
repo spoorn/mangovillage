@@ -7,7 +7,7 @@ use mangovillage_common::networking::server_packets::Player;
 use mangovillage_common::networking::server_packets::{Players, PlayersPacketBuilder};
 use mangovillage_common::player;
 use mangovillage_common::player::component::PlayerData;
-use mangovillage_common::player::PLAYER_MODEL_HANDLE_IDS;
+use mangovillage_common::player::{set_player_rotation, PLAYER_MODEL_HANDLE_IDS};
 use player::get_player_collider;
 
 use crate::networking::resource::ClientPacketManager;
@@ -53,10 +53,12 @@ fn update_players(
             if let Some(server_player_info) = server_players_map.remove(&client_player_data.id) {
                 // TODO: handle model changes
                 // TODO: optimize
+                let old_translation = transform.translation;
                 transform.translation.x = server_player_info.transform[0];
                 transform.translation.y = server_player_info.transform[1];
                 transform.translation.z = server_player_info.transform[2];
-                transform.rotation.x = server_player_info.transform[3];
+                let look_direction = Vec2::new(transform.translation.x - old_translation.x, transform.translation.y - old_translation.y);
+                set_player_rotation(look_direction, &mut transform);
                 transform.scale = Vec3::splat(server_player_info.scale);
             } else {
                 debug!("Removing player {}", client_player_data.id);
@@ -69,7 +71,7 @@ fn update_players(
             debug!("Adding new player {}", id);
             let mut transform =
                 Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2]).with_scale(Vec3::splat(player.scale));
-            transform.rotate_x(player.transform[3]);
+            //transform.look_at(Vec3::NEG_Y, Vec3::Z);
             let player_model = PLAYER_MODEL_HANDLE_IDS[player.handle_id as usize];
             commands
                 .spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() })
