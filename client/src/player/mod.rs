@@ -69,8 +69,7 @@ fn update_players(
         // New players
         server_players_map.into_iter().for_each(|(id, player)| {
             debug!("Adding new player {}", id);
-            let mut transform =
-                Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2]).with_scale(Vec3::splat(player.scale));
+            let transform = Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2]).with_scale(Vec3::splat(player.scale));
             //transform.look_at(Vec3::NEG_Y, Vec3::Z);
             let player_model = PLAYER_MODEL_HANDLE_IDS[player.handle_id as usize];
             commands

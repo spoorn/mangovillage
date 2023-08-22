@@ -36,12 +36,7 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
     // register server side packets
     let receives = util::validate_register_results(
         false,
-        register_receive!(
-            manager,
-            (Connect, ConnectPacketBuilder),
-            (Disconnect, DisconnectPacketBuilder),
-            (Movement, MovementPacketBuilder)
-        ),
+        register_receive!(manager, (Connect, ConnectPacketBuilder), (Disconnect, DisconnectPacketBuilder), (Movement, MovementPacketBuilder)),
     );
     let sends = util::validate_register_results(false, register_send!(manager, ConnectAck, SpawnScene, Players));
     // TODO: better error handling
@@ -65,12 +60,7 @@ fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Comma
     for (addr, leaves) in connect_packets.into_iter() {
         if matches!(leaves, Some(connects) if !connects.is_empty()) {
             info!("[server] Client with addr={} connected", addr);
-            player::spawn_player(
-                &mut commands,
-                addr.clone(),
-                manager.get_client_id(addr.clone()).unwrap(),
-                &asset_server,
-            );
+            player::spawn_player(&mut commands, addr.clone(), manager.get_client_id(addr.clone()).unwrap(), &asset_server);
             let client_id = manager.get_client_id(&addr).unwrap();
             info!("Sending ConnectAck to client id={}, addr={}", client_id, addr);
             manager.send_to(&addr, ConnectAck { id: client_id }).unwrap();
@@ -81,7 +71,7 @@ fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Comma
                     addr,
                     SpawnScene {
                         level: LevelInfo {
-                            handle_id: "models/volcano_island_lowpoly/lowpolyisland.glb#Scene0".to_string(),
+                            handle_id: "models/small/big.glb#Scene0".to_string(),
                             scene_transform: [0.0, 0.0, 0.0, std::f32::consts::PI / 2.0],
                             scale: 1.0,
                         },
@@ -92,11 +82,7 @@ fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Comma
     }
 }
 
-fn handle_leaves(
-    mut manager: ResMut<ServerPacketManager>,
-    mut commands: Commands,
-    players_query: Query<(Entity, &ServerPlayer)>,
-) {
+fn handle_leaves(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, players_query: Query<(Entity, &ServerPlayer)>) {
     let leave_packets = manager.received_all::<Disconnect, DisconnectPacketBuilder>(false).unwrap();
     let mut players_to_remove = HashSet::new();
 

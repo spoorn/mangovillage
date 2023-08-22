@@ -11,16 +11,9 @@ impl Plugin for WorldPlugin {
 }
 
 /// Loads world into server
-fn load_world(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut server_state: ResMut<NextState<ServerState>>,
-) {
-    let level = LevelInfo {
-        handle_id: "models/volcano_island_lowpoly/lowpolyisland.glb#Scene0".to_string(),
-        scene_transform: [0.0, 0.0, 0.0, std::f32::consts::PI / 2.0],
-        scale: 1.0,
-    };
+fn load_world(mut commands: Commands, asset_server: Res<AssetServer>, mut server_state: ResMut<NextState<ServerState>>) {
+    let level =
+        LevelInfo { handle_id: "models/small/big.glb#Scene0".to_string(), scene_transform: [0.0, 0.0, 0.0, std::f32::consts::PI / 2.0], scale: 1.0 };
     info!("[server] Spawning level {}", level.handle_id);
     world::load_level(&mut commands, &asset_server, &level);
     info!("[server] Transitioning state to LoadPhysics");
