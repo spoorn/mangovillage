@@ -49,7 +49,7 @@ fn players_move(
                     let dy = movement_vec.y * PLAYER_MOVEMENT_SPEED * time.delta_seconds();
                     match controller.translation {
                         None => controller.translation = Some(Vec3::new(dx, dy, 0.0)),
-                        Some(mut translation) => {
+                        Some(ref mut translation) => {
                             translation.x += dx;
                             translation.y += dy;
                         }
@@ -64,6 +64,9 @@ fn players_move(
     }
 }
 
+/// Player collision system.  Keeps the player afloat colliders, but don't apply horizontal forces from collisions.
+///
+/// Automatically does not run in parallel with the player movement system since they access the same data mutably.
 fn player_collision(
     rapier_context: Res<RapierContext>,
     mut players: Query<
@@ -76,13 +79,16 @@ fn player_collision(
         //println!("output: {:?}", controller_output);
         // Shape cast to check if we are grounded
         // We do this manually instead of `output.grounded` so the grounded check is always consistent
-        if rapier_context.cast_shape(transform.translation, transform.rotation, Vec3::NEG_Z, collider, 0.69, QueryFilter::only_fixed()).is_none() {
+        if rapier_context.cast_shape(transform.translation, transform.rotation, Vec3::NEG_Z, collider, 1.9, QueryFilter::only_fixed()).is_none() {
             match controller.translation {
                 None => controller.translation = Some(Vec3::NEG_Z * GRAVITY_STEP_SPEED * time.delta_seconds()),
                 Some(mut translation) => translation.z -= GRAVITY_STEP_SPEED * time.delta_seconds(),
             }
+            //println!("gravity {:?}", controller.translation);
         } else {
+            // TODO: handle oscillating collisions, such as bouncing up and down between above and below colliders indefinitely
             if let Some(output) = controller_output {
+                //println!("collisions: {:?}", output);
                 // Keep player above ground
                 for collision in &output.collisions {
                     //println!("collision: {:?}", collision);
@@ -108,14 +114,17 @@ fn player_collision(
                             dz *= angle.tan()
                         }
                         // Add a small offset buffer so player floats slightly above ground
-                        dz += 0.69;
+                        //dz += 0.2;
+                        // divide by number of collisions to average it out
+                        // TODO: optimize and make this properly check toi status
+                        dz /= output.collisions.len() as f32;
                         // If collided entity is above, push it down
                         if collision.toi.normal1.z < 0.0 {
                             dz = -dz;
                         }
                         match controller.translation {
                             None => controller.translation = Some(Vec3::new(0.0, 0.0, dz)),
-                            Some(mut translation) => {
+                            Some(ref mut translation) => {
                                 if translation.z <= 0.0 {
                                     translation.z = dz;
                                 } else {
@@ -171,7 +180,7 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, asset_server
         .insert(KinematicCharacterController {
             up: Vec3::Z,
             // Use a low value because our collision system above already factors in an offset
-            offset: CharacterLength::Absolute(0.01),
+            offset: CharacterLength::Absolute(2.0),
             slide: false,
             // Our collision system uses normal forces to automatically do autostep on slopes.
             // We can add this back or modify the collision system to add step heights if needed
