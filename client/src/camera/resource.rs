@@ -1,8 +1,22 @@
-use bevy::prelude::Resource;
+use bevy::prelude::{Resource, Transform};
 use derivative::Derivative;
 
-/// Mutable zoom speed
+/// Locked camera state
 #[derive(Derivative, Resource)]
+#[derivative(Default)]
+pub struct LockedCameraState {
+    pub transform: Transform,
+}
+
+/// Debug camera state
+#[derive(Resource)]
+pub struct DebugCameraState {
+    pub transform: Transform,
+    pub camera_speed: CameraSpeed,
+}
+
+/// Mutable zoom speed
+#[derive(Derivative)]
 #[derivative(Default)]
 pub struct CameraSpeed {
     #[derivative(Default(value = "50.0"))]

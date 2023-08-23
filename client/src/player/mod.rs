@@ -11,8 +11,11 @@ use mangovillage_common::player::{set_player_rotation, PLAYER_MODEL_HANDLE_IDS};
 use player::get_player_collider;
 
 use crate::networking::resource::ClientPacketManager;
+use crate::player::component::Me;
+use crate::player::resource::ClientId;
 use crate::state::ClientState;
 
+pub mod component;
 pub mod resource;
 
 pub struct PlayerPlugin;
@@ -41,6 +44,7 @@ fn update_players(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut players_query: Query<(Entity, &PlayerData, &mut Transform)>,
+    client_id: Res<ClientId>,
 ) {
     let server_player_packets = manager.received::<Players, PlayersPacketBuilder>(false).unwrap();
     if let Some(mut server_players) = server_player_packets {
@@ -66,17 +70,22 @@ fn update_players(
             }
         }
 
+        // TODO: handle spawning players in a separate system to optimize
         // New players
         server_players_map.into_iter().for_each(|(id, player)| {
             debug!("Adding new player {}", id);
             let transform = Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2]).with_scale(Vec3::splat(player.scale));
             //transform.look_at(Vec3::NEG_Y, Vec3::Z);
             let player_model = PLAYER_MODEL_HANDLE_IDS[player.handle_id as usize];
-            commands
-                .spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() })
+            let mut entity_comments = commands.spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() });
+            entity_comments
                 .insert(PlayerData { id, handle_id: player.handle_id })
                 // Add collider for debug rendering
                 .insert(get_player_collider());
+
+            if client_id.0 == id {
+                entity_comments.insert(Me);
+            }
         });
     }
 }

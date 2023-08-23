@@ -1,4 +1,4 @@
-mod debug;
+mod camera;
 mod networking;
 mod physics;
 mod player;
@@ -44,7 +44,7 @@ fn main() {
             networking::ClientPlugin { client_addr: client_addr.clone(), server_addr: server_addr.clone() },
             world::WorldPlugin,
             physics::PhysicsPlugin,
-            debug::camera::DebugCameraPlugin,
+            camera::CameraPlugin,
             player::PlayerPlugin,
         ))
         .run();
