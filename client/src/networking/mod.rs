@@ -21,13 +21,10 @@ pub struct ClientPlugin {
 
 impl Plugin for ClientPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ClientInfo {
-            client_addr: self.client_addr.clone(),
-            server_addr: self.server_addr.clone(),
-        })
-        .add_systems(Startup, init_client)
-        .add_systems(Update, transition_running.run_if(in_state(ClientState::JoiningServer)))
-        .add_systems(Update, on_app_exit);
+        app.insert_resource(ClientInfo { client_addr: self.client_addr.clone(), server_addr: self.server_addr.clone() })
+            .add_systems(Startup, init_client)
+            .add_systems(Update, transition_running.run_if(in_state(ClientState::JoiningServer)))
+            .add_systems(Update, on_app_exit);
     }
 }
 
@@ -36,12 +33,7 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
     // register packets client-side
     let receives = util::validate_register_results(
         true,
-        register_receive!(
-            manager,
-            (ConnectAck, ConnectAckPacketBuilder),
-            (SpawnScene, SpawnScenePacketBuilder),
-            (Players, PlayersPacketBuilder)
-        ),
+        register_receive!(manager, (ConnectAck, ConnectAckPacketBuilder), (SpawnScene, SpawnScenePacketBuilder), (Players, PlayersPacketBuilder)),
     );
     let sends = util::validate_register_results(true, register_send!(manager, Connect, Disconnect, Movement));
     // TODO: better error handling
@@ -62,11 +54,7 @@ fn init_client(mut commands: Commands, client_info: Res<ClientInfo>) {
 }
 
 /// Waits for ConnectAck from server and goes to Running state initially, and switches states when we get commands from server
-fn transition_running(
-    mut manager: ResMut<ClientPacketManager>,
-    mut client_state: ResMut<NextState<ClientState>>,
-    mut commands: Commands,
-) {
+fn transition_running(mut manager: ResMut<ClientPacketManager>, mut client_state: ResMut<NextState<ClientState>>, mut commands: Commands) {
     let acks = manager.received::<ConnectAck, ConnectAckPacketBuilder>(false).unwrap();
     // Should only be 1 packet
     if let Some(acks) = acks {
@@ -79,11 +67,7 @@ fn transition_running(
 }
 
 // Send disconnect packet to server to disconnect gracefully rather than wait for timeout.
-fn on_app_exit(
-    mut manager: ResMut<ClientPacketManager>,
-    exit: EventReader<AppExit>,
-    close_window: EventReader<WindowCloseRequested>,
-) {
+fn on_app_exit(mut manager: ResMut<ClientPacketManager>, exit: EventReader<AppExit>, close_window: EventReader<WindowCloseRequested>) {
     if !exit.is_empty() || !close_window.is_empty() {
         info!("[client] Exiting game");
         manager.send(Disconnect).unwrap();

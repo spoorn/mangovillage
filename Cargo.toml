@@ -24,8 +24,9 @@ bevy-inspector-egui = "0.19"
 # Bug in bevy_ecs_tilemap where background is blended with white tiles: https://github.com/Trouv/bevy_ecs_ldtk/issues/65
 #bevy_ecs_tilemap = "0.10.0"
 bevy_embedded_assets = "0.8"
-bevy_rapier3d = "0.22.0"
-bevy_xpbd_3d = { git = "https://github.com/Jondolf/bevy_xpbd.git" }
+# bevy_rapier release has a bug with colliders trailing geometry: https://github.com/dimforge/bevy_rapier/issues/403
+bevy_rapier3d = { git = "https://github.com/dimforge/bevy_rapier.git" }
+#bevy_xpbd_3d = { git = "https://github.com/Jondolf/bevy_xpbd.git" }
 bevy_render = "0.11"
 derivative = "2.2.0"
 durian = { path = "../durian/durian", version = "0.4" }

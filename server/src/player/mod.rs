@@ -5,6 +5,7 @@ use bevy_rapier3d::prelude::{
     CharacterLength, Collider, KinematicCharacterController, LockedAxes, QueryFilter, QueryFilterFlags, RapierContext, RigidBody, TOIStatus,
 };
 
+use mangovillage_common::component::MoveTarget;
 use mangovillage_common::networking::client_packets::{Movement, MovementPacketBuilder};
 use mangovillage_common::networking::server_packets::{Player, Players};
 use mangovillage_common::physics::component::ColliderBundle;
@@ -19,44 +20,59 @@ use crate::state::ServerState;
 
 pub mod component;
 
-const PLAYER_MOVEMENT_SPEED: f32 = 1000.0;
+const PLAYER_MOVEMENT_SPEED: f32 = 100.0;
 const GRAVITY_STEP_SPEED: f32 = 100.0;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (broadcast_players, players_move, player_collision).run_if(in_state(ServerState::Running)));
+        app.add_systems(Update, (broadcast_players, players_move, movement, player_collision).run_if(in_state(ServerState::Running)));
         // Run collision handling in substep schedule
         //.add_systems(SubstepSchedule, player_collision.run_if(in_state(ServerState::Running)).in_set(SubstepSet::SolveUserConstraints));
     }
 }
 
-fn players_move(
-    mut manager: ResMut<ServerPacketManager>,
-    mut players: Query<(&mut Transform, &ServerPlayer, &PlayerData, &mut KinematicCharacterController)>,
+fn movement(
+    mut commands: Commands,
+    mut players: Query<(Entity, &mut Transform, &mut MoveTarget, &mut KinematicCharacterController), With<ServerPlayer>>,
     time: Res<Time>,
 ) {
+    for (entity, mut transform, mut move_target, mut controller) in players.iter_mut() {
+        let movement_vec = Vec2::new(move_target.target.0, move_target.target.1).normalize();
+        let dx = movement_vec.x * PLAYER_MOVEMENT_SPEED * time.delta_seconds();
+        let dy = movement_vec.y * PLAYER_MOVEMENT_SPEED * time.delta_seconds();
+        match controller.translation {
+            None => controller.translation = Some(Vec3::new(dx, dy, 0.0)),
+            Some(ref mut translation) => {
+                translation.x += dx;
+                translation.y += dy;
+            }
+        };
+        let translation = controller.translation.unwrap();
+        //println!("trans: {:?}", transform.translation);
+        set_player_rotation(translation.xy(), &mut transform);
+        move_target.target.0 -= dx;
+        move_target.target.1 -= dy;
+        if move_target.target.0.abs() < 0.05 && move_target.target.1.abs() < 0.05 {
+            commands.entity(entity).remove::<MoveTarget>();
+        }
+        //println!("move: {:?}", controller.translation);
+    }
+}
+
+fn players_move(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, mut players: Query<(Entity, &ServerPlayer, &PlayerData)>) {
     let move_packets = manager.received_all::<Movement, MovementPacketBuilder>(false).unwrap();
     for (addr, move_packets) in move_packets {
         if let Some(move_packet) = move_packets {
             let movement = move_packet.last().unwrap();
             // Find player
             let mut found = false;
-            for (mut transform, server_player, player_data, mut controller) in players.iter_mut() {
+            for (entity, server_player, player_data) in players.iter_mut() {
                 if server_player.addr == addr && player_data.id == manager.get_client_id(&addr).unwrap() {
                     found = true;
-                    let movement_vec = Vec2::new(movement.translation[0], movement.translation[1]).normalize();
-                    let dx = movement_vec.x * PLAYER_MOVEMENT_SPEED * time.delta_seconds();
-                    let dy = movement_vec.y * PLAYER_MOVEMENT_SPEED * time.delta_seconds();
-                    match controller.translation {
-                        None => controller.translation = Some(Vec3::new(dx, dy, 0.0)),
-                        Some(ref mut translation) => {
-                            translation.x += dx;
-                            translation.y += dy;
-                        }
-                    };
-                    set_player_rotation(controller.translation.unwrap().xy(), &mut transform);
-                    //println!("move: {:?}", controller.translation);
+                    // TODO: path to spot in world?
+                    let movement_vec = Vec2::new(movement.translation[0], movement.translation[1]).normalize() * 0.2;
+                    commands.entity(entity).insert(MoveTarget { target: (movement_vec.x, movement_vec.y) });
                     break;
                 }
             }
@@ -162,7 +178,7 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, asset_server
     info!("[server] Spawning player with addr={}, id={}", addr, id);
     let player_data = PlayerData { id, handle_id: 0 };
     let mut transform = Transform::from_xyz(-10.0, 0.0, 150.0).with_scale(Vec3::splat(1.0));
-    //transform.look_at(Vec3::NEG_Y, Vec3::Z);
+    transform.look_to(Vec3::NEG_Y, Vec3::Z);
     let player_model = PLAYER_MODEL_HANDLE_IDS[player_data.handle_id as usize];
     let entity = commands.spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() }).id();
     debug!("Player EntityId={:?}", entity);

@@ -19,7 +19,7 @@ pub struct DebugCameraState {
 #[derive(Derivative)]
 #[derivative(Default)]
 pub struct CameraSpeed {
-    #[derivative(Default(value = "50.0"))]
+    #[derivative(Default(value = "1.0"))]
     pub zoom_speed: f32,
     #[derivative(Default(value = "0.005"))]
     pub move_speed: f32,

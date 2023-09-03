@@ -4,13 +4,13 @@ use bevy_rapier3d::prelude::Collider;
 
 pub mod component;
 
-pub static PLAYER_MODEL_HANDLE_IDS: [&str; 1] = ["models/owl/scene.gltf#Scene0"];
+pub static PLAYER_MODEL_HANDLE_IDS: [&str; 2] = ["models/amber/Amber.glb#Scene0", "models/owl/scene.gltf#Scene0"];
 
 /// Get's the default player collider
 ///
 /// Due to some issue with rapier not reading Transforms, this has to follow the model's initial state and direction.
 pub fn get_player_collider() -> Collider {
-    Collider::capsule_y(5.0, 12.0)
+    Collider::capsule_y(1.0, 1.0)
 }
 
 /// Sets the player's facing direction

@@ -1,3 +1,4 @@
+pub mod component;
 pub mod networking;
 pub mod physics;
 pub mod player;

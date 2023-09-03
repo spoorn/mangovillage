@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::render::view::NoFrustumCulling;
 use bevy::utils::HashMap;
 use bevy::window::PrimaryWindow;
 
@@ -45,7 +46,16 @@ fn update_players(
     asset_server: Res<AssetServer>,
     mut players_query: Query<(Entity, &PlayerData, &mut Transform)>,
     client_id: Res<ClientId>,
+    meshes: Query<(Entity, &Handle<Mesh>), Without<NoFrustumCulling>>,
+    time: Res<Time>,
 ) {
+    // for (entity, client_player_data, mut transform) in players_query.iter_mut() {
+    //     println!("position {:}", transform.translation);
+    // }
+    // TODO: properly disable frustum culling for player meshes only due to bug https://github.com/bevyengine/bevy/issues/4294
+    for (entity, _mesh) in &meshes {
+        commands.entity(entity).insert(NoFrustumCulling);
+    }
     let server_player_packets = manager.received::<Players, PlayersPacketBuilder>(false).unwrap();
     if let Some(mut server_players) = server_player_packets {
         // Only care about last packet
@@ -61,9 +71,15 @@ fn update_players(
                 transform.translation.x = server_player_info.transform[0];
                 transform.translation.y = server_player_info.transform[1];
                 transform.translation.z = server_player_info.transform[2];
+                //println!("trans {:}", transform.translation);
+                // transform.translation = old_translation;
+                // if time.elapsed_seconds() as u32 / 2 % 2 == 0 {
+                //     transform.translation.x += 0.5;
+                // }
                 let look_direction = Vec2::new(transform.translation.x - old_translation.x, transform.translation.y - old_translation.y);
                 set_player_rotation(look_direction, &mut transform);
                 transform.scale = Vec3::splat(server_player_info.scale);
+                //println!("### transform {:?}", transform);
             } else {
                 debug!("Removing player {}", client_player_data.id);
                 commands.entity(entity).despawn_recursive();
@@ -74,8 +90,9 @@ fn update_players(
         // New players
         server_players_map.into_iter().for_each(|(id, player)| {
             debug!("Adding new player {}", id);
-            let transform = Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2]).with_scale(Vec3::splat(player.scale));
-            //transform.look_at(Vec3::NEG_Y, Vec3::Z);
+            let mut transform =
+                Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2]).with_scale(Vec3::splat(player.scale));
+            transform.look_to(Vec3::NEG_Y, Vec3::Z);
             let player_model = PLAYER_MODEL_HANDLE_IDS[player.handle_id as usize];
             let mut entity_comments = commands.spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() });
             entity_comments

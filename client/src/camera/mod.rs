@@ -1,7 +1,10 @@
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
+use bevy::transform::TransformSystem;
 use bevy::window::PrimaryWindow;
+use bevy_rapier3d::plugin::PhysicsSet;
 use bevy_rapier3d::prelude::DebugRenderContext;
+
 use mangovillage_common::player::component::PlayerData;
 
 use crate::camera::component::PanOrbitCamera;
@@ -15,9 +18,9 @@ mod resource;
 const PAN_SPEED: f32 = 1.0;
 const ORBIT_SPEED: f32 = 2.0;
 /// Camera Z translation relative to player, used in combination with a rotation to angle camera
-const Z_TRANSLATION: f32 = 1000.0;
+const Z_TRANSLATION: f32 = 10.0;
 /// Camera Y translation relative to player, used in combination with a rotation to angle camera
-const Y_TRANSLATION: f32 = -400.0;
+const Y_TRANSLATION: f32 = -5.0;
 
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
@@ -26,7 +29,11 @@ impl Plugin for CameraPlugin {
             .insert_resource(MeshVisibility { visible: true })
             .add_systems(Startup, setup_camera)
             .add_systems(Update, toggle_camera)
-            .add_systems(Update, update_locked_camera.run_if(in_state(CameraState::Locked)))
+            // Follow camera system must run in this schedule: https://github.com/bevyengine/bevy/issues/9682
+            .add_systems(
+                PostUpdate,
+                update_locked_camera.run_if(in_state(CameraState::Locked)).after(PhysicsSet::Writeback).before(TransformSystem::TransformPropagate),
+            )
             .add_systems(Update, (toggle_visibility, update_zoom_speed, zoom, pan, orbit, movement).run_if(in_state(CameraState::Debug)));
     }
 }
@@ -52,7 +59,7 @@ fn toggle_camera(
     mut mesh_vis: ResMut<MeshVisibility>,
     mut mesh_query: Query<&mut Visibility, With<Handle<Scene>>>,
     mut camera_query: Query<&mut Transform, With<Camera>>,
-    mut debug_render_context: ResMut<DebugRenderContext>,
+    //mut debug_render_context: ResMut<DebugRenderContext>,
 ) {
     if buttons.just_pressed(KeyCode::F1) {
         let mut transform = camera_query.single_mut();
@@ -120,11 +127,11 @@ fn update_zoom_speed(mut camera_state: ResMut<DebugCameraState>, buttons: Res<In
     let mut changed = false;
     let camera_speed = &mut camera_state.camera_speed;
     if buttons.pressed(KeyCode::BracketLeft) {
-        camera_speed.zoom_speed = f32::max(0.01, camera_speed.zoom_speed - 3.0);
+        camera_speed.zoom_speed = f32::max(0.01, camera_speed.zoom_speed - 0.1);
         camera_speed.move_speed = f32::max(0.0001, camera_speed.move_speed - 0.0001);
         changed = true;
     } else if buttons.pressed(KeyCode::BracketRight) {
-        camera_speed.zoom_speed += 3.0;
+        camera_speed.zoom_speed += 0.1;
         camera_speed.move_speed += 0.0001;
         changed = true;
     }

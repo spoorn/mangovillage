@@ -7,6 +7,7 @@ mod state;
 mod world;
 
 use crate::state::ClientState;
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
@@ -49,5 +50,6 @@ fn main() {
             camera::CameraPlugin,
             player::PlayerPlugin,
         ))
+        .add_plugins((LogDiagnosticsPlugin::default(), FrameTimeDiagnosticsPlugin::default()))
         .run();
 }
