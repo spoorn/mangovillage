@@ -58,13 +58,14 @@ fn toggle_camera(
     mut next_camera_state: ResMut<NextState<CameraState>>,
     mut mesh_vis: ResMut<MeshVisibility>,
     mut mesh_query: Query<&mut Visibility, With<Handle<Scene>>>,
-    mut camera_query: Query<&mut Transform, With<Camera>>,
+    mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), With<Camera>>,
     //mut debug_render_context: ResMut<DebugRenderContext>,
 ) {
     if buttons.just_pressed(KeyCode::F1) {
-        let mut transform = camera_query.single_mut();
+        let (mut pan_orbit, mut transform) = camera_query.single_mut();
         // debug camera state always matches the last camera transform
         debug_camera_state.transform = *transform;
+        pan_orbit.radius = debug_camera_state.transform.translation.distance(pan_orbit.focus);
         match camera_state.get() {
             CameraState::Locked => {
                 // Save last locked camera state
