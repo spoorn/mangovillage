@@ -42,7 +42,7 @@ impl Plugin for CameraPlugin {
 fn setup_camera(mut commands: Commands) {
     let camera_translation = Vec3::new(0.0, Y_TRANSLATION, Z_TRANSLATION);
     let focus = Vec3::new(0.0, 0.0, 0.0);
-    let mut transform = Transform::from_translation(camera_translation).looking_at(focus, Vec3::Y);
+    let transform = Transform::from_translation(camera_translation).looking_at(focus, Vec3::Y);
     commands.spawn((Camera3dBundle { transform, ..default() }, PanOrbitCamera { focus, radius: (camera_translation - focus).length(), ..default() }));
     // TODO: make initial camera locked one for release
     commands.insert_resource(DebugCameraState { transform, camera_speed: CameraSpeed::default() });

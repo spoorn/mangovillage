@@ -11,6 +11,7 @@ use mangovillage_common::player::component::PlayerData;
 use mangovillage_common::player::{set_player_rotation, PLAYER_MODEL_HANDLE_IDS};
 use player::get_player_collider;
 
+use crate::component::Animations;
 use crate::networking::resource::ClientPacketManager;
 use crate::player::component::Me;
 use crate::player::resource::ClientId;
@@ -22,7 +23,7 @@ pub mod resource;
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (update_players, movement).run_if(in_state(ClientState::Running)));
+        app.add_systems(Update, (update_players, movement, player_animations).run_if(in_state(ClientState::Running)));
     }
 }
 
@@ -47,11 +48,7 @@ fn update_players(
     mut players_query: Query<(Entity, &PlayerData, &mut Transform)>,
     client_id: Res<ClientId>,
     meshes: Query<(Entity, &Handle<Mesh>), Without<NoFrustumCulling>>,
-    time: Res<Time>,
 ) {
-    // for (entity, client_player_data, mut transform) in players_query.iter_mut() {
-    //     println!("position {:}", transform.translation);
-    // }
     // TODO: properly disable frustum culling for player meshes only due to bug https://github.com/bevyengine/bevy/issues/4294
     for (entity, _mesh) in &meshes {
         commands.entity(entity).insert(NoFrustumCulling);
@@ -93,16 +90,40 @@ fn update_players(
             let mut transform =
                 Transform::from_xyz(player.transform[0], player.transform[1], player.transform[2]).with_scale(Vec3::splat(player.scale));
             transform.look_to(Vec3::NEG_Y, Vec3::Z);
-            let player_model = PLAYER_MODEL_HANDLE_IDS[player.handle_id as usize];
-            let mut entity_comments = commands.spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() });
-            entity_comments
+            let mut entity = player::spawn_player(&mut commands, transform, player.handle_id, &asset_server);
+            debug!("Added player {} with entity id {:?}", id, entity.id());
+
+            // Animations
+            let mut animations = Vec::new();
+            for i in 0..1 {
+                let mut animation_asset = String::new();
+                animation_asset.push_str(PLAYER_MODEL_HANDLE_IDS[player.handle_id as usize]);
+                animation_asset.push_str("#Animation");
+                animation_asset.push_str(i.to_string().as_str());
+                animations.push(asset_server.load(animation_asset));
+            }
+
+            entity
                 .insert(PlayerData { id, handle_id: player.handle_id })
                 // Add collider for debug rendering
-                .insert(get_player_collider());
+                .insert(get_player_collider())
+                .insert(Animations(animations));
 
             if client_id.0 == id {
-                entity_comments.insert(Me);
+                entity.insert(Me);
             }
         });
+    }
+}
+
+fn player_animations(
+    animations: Query<&Animations, With<PlayerData>>,
+    parents: Query<&Parent>,
+    mut animation_players: Query<(&Parent, &mut AnimationPlayer), Added<AnimationPlayer>>,
+) {
+    for (parent, mut animation_player) in &mut animation_players {
+        // TODO: link this better, something like https://github.com/bevyengine/bevy/discussions/8996 or https://github.com/bevyengine/bevy/discussions/5564
+        // parent's parent to get player's entity because *Player* -> Scene -> AnimationPlayer
+        animation_player.play(animations.get(parents.get(parent.get()).unwrap().get()).unwrap().0[0].clone_weak()).repeat();
     }
 }

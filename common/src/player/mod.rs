@@ -1,10 +1,24 @@
+use bevy::ecs::system::EntityCommands;
 use bevy::math::{Vec2, Vec3};
-use bevy::prelude::Transform;
+use bevy::prelude::{default, AssetServer, Commands, Res, SceneBundle, Transform};
 use bevy_rapier3d::prelude::Collider;
 
 pub mod component;
 
-pub static PLAYER_MODEL_HANDLE_IDS: [&str; 2] = ["models/amber/Amber.glb#Scene0", "models/owl/scene.gltf#Scene0"];
+pub static PLAYER_MODEL_HANDLE_IDS: [&str; 2] = ["models/amber/Amber.glb", "models/owl/scene.gltf"];
+
+/// Common spawn player components between client and server
+pub fn spawn_player<'a, 'w, 's>(
+    commands: &'a mut Commands<'w, 's>,
+    transform: Transform,
+    handle_id: u8,
+    asset_server: &Res<AssetServer>,
+) -> EntityCommands<'w, 's, 'a> {
+    let mut player_model = String::new();
+    player_model.push_str(PLAYER_MODEL_HANDLE_IDS[handle_id as usize]);
+    player_model.push_str("#Scene0");
+    commands.spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() })
+}
 
 /// Get's the default player collider
 ///

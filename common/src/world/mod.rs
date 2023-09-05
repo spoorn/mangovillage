@@ -1,8 +1,8 @@
-use crate::resource::LevelInfo;
 use bevy::asset::AssetServer;
 use bevy::math::Vec3;
 use bevy::prelude::{default, Commands, Res, SceneBundle, Transform};
-use bevy::render::view::NoFrustumCulling;
+
+use crate::resource::LevelInfo;
 
 pub fn load_level(commands: &mut Commands, asset_server: &Res<AssetServer>, level: &LevelInfo) {
     let mut transform =

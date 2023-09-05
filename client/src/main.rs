@@ -1,4 +1,5 @@
 mod camera;
+mod component;
 mod lighting;
 mod networking;
 mod physics;
@@ -12,6 +13,7 @@ use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
 use bevy_embedded_assets::EmbeddedAssetPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use std::env;
 
 fn main() {
@@ -50,6 +52,6 @@ fn main() {
             camera::CameraPlugin,
             player::PlayerPlugin,
         ))
-        .add_plugins((LogDiagnosticsPlugin::default(), FrameTimeDiagnosticsPlugin::default()))
+        .add_plugins((LogDiagnosticsPlugin::default(), FrameTimeDiagnosticsPlugin::default(), WorldInspectorPlugin::default()))
         .run();
 }

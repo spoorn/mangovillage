@@ -11,7 +11,7 @@ use mangovillage_common::networking::server_packets::{Player, Players};
 use mangovillage_common::physics::component::ColliderBundle;
 use mangovillage_common::player;
 use mangovillage_common::player::component::PlayerData;
-use mangovillage_common::player::{set_player_rotation, PLAYER_MODEL_HANDLE_IDS};
+use mangovillage_common::player::set_player_rotation;
 use player::get_player_collider;
 
 use crate::networking::resource::ServerPacketManager;
@@ -179,11 +179,9 @@ pub fn spawn_player(commands: &mut Commands, addr: String, id: u32, asset_server
     let player_data = PlayerData { id, handle_id: 0 };
     let mut transform = Transform::from_xyz(-10.0, 0.0, 150.0).with_scale(Vec3::splat(1.0));
     transform.look_to(Vec3::NEG_Y, Vec3::Z);
-    let player_model = PLAYER_MODEL_HANDLE_IDS[player_data.handle_id as usize];
-    let entity = commands.spawn(SceneBundle { scene: asset_server.load(player_model), transform, ..default() }).id();
-    debug!("Player EntityId={:?}", entity);
-    commands
-        .entity(entity)
+    let mut entity = player::spawn_player(commands, transform, player_data.handle_id, asset_server);
+    debug!("Player EntityId={:?}", entity.id());
+    entity
         .insert(ServerPlayerBundle {
             server_player: ServerPlayer { addr },
             player_data,
