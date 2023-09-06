@@ -11,7 +11,7 @@ use crate::state::ClientState;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
-use bevy::window::WindowResolution;
+use bevy::window::{PresentMode, WindowResolution};
 use bevy_embedded_assets::EmbeddedAssetPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use std::env;
@@ -38,6 +38,7 @@ fn main() {
                     title: "Mango Village".to_string(),
                     resolution: WindowResolution::new(1280.0, 720.0),
                     position: WindowPosition::Centered(MonitorSelection::Primary),
+                    //present_mode: PresentMode::Immediate,
                     ..default()
                 }),
                 ..default()

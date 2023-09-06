@@ -71,7 +71,7 @@ fn players_move(mut manager: ResMut<ServerPacketManager>, mut commands: Commands
                 if player_data.id == remote_id {
                     found = true;
                     // TODO: path to spot in world?
-                    let movement_vec = Vec2::new(movement.translation[0], movement.translation[1]).normalize() * 0.2;
+                    let movement_vec = Vec2::new(movement.translation[0], movement.translation[1]).normalize() * 0.5;
                     commands.entity(entity).insert(MoveTarget { target: (movement_vec.x, movement_vec.y) });
                     break;
                 }
