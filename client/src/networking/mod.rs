@@ -59,7 +59,7 @@ fn transition_running(mut manager: ResMut<ClientPacketManager>, mut client_state
     // Should only be 1 packet
     if let Some(acks) = acks {
         let connect_ack = acks.last().unwrap();
-        info!("Received ConnectAck from server, id={}", connect_ack.id);
+        info!("Received ConnectAck from server, client_id={}", connect_ack.id);
         commands.insert_resource(ClientId(connect_ack.id));
         info!("Transitioning state to LoadingLevel");
         client_state.set(ClientState::LoadingLevel);

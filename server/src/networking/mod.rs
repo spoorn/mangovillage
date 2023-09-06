@@ -8,6 +8,7 @@ use mangovillage_common::networking::client_packets::{
     Connect, ConnectPacketBuilder, Disconnect, DisconnectPacketBuilder, Movement, MovementPacketBuilder,
 };
 use mangovillage_common::networking::server_packets::{ConnectAck, Players, SpawnScene};
+use mangovillage_common::player::component::PlayerData;
 use mangovillage_common::resource::LevelInfo;
 use mangovillage_common::util;
 
@@ -57,18 +58,18 @@ fn init_server(mut commands: Commands, server_info: Res<ServerInfo>) {
 // TODO: sweep for clients that did not send legit Connect packet and disconnect them
 fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, asset_server: Res<AssetServer>) {
     let connect_packets = manager.received_all::<Connect, ConnectPacketBuilder>(false).unwrap();
-    for (addr, leaves) in connect_packets.into_iter() {
+    for (remote_id, leaves) in connect_packets.into_iter() {
         if matches!(leaves, Some(connects) if !connects.is_empty()) {
-            info!("[server] Client with addr={} connected", addr);
-            player::spawn_player(&mut commands, addr.clone(), manager.get_client_id(addr.clone()).unwrap(), &asset_server);
-            let client_id = manager.get_client_id(&addr).unwrap();
-            info!("Sending ConnectAck to client id={}, addr={}", client_id, addr);
-            manager.send_to(&addr, ConnectAck { id: client_id }).unwrap();
+            let addr = manager.get_remote_address(remote_id).unwrap();
+            info!("[server] Client with addr={}, remote_id={} connected", addr, remote_id);
+            player::spawn_player(&mut commands, addr, remote_id, &asset_server);
+            info!("Sending ConnectAck to client {}", remote_id);
+            manager.send_to(remote_id, ConnectAck { id: remote_id }).unwrap();
             // TODO: refactor this out of here
-            info!("[server] Sending SpawnScene command to client {}", addr);
+            info!("[server] Sending SpawnScene command to client {}", remote_id);
             manager
                 .send_to(
-                    addr,
+                    remote_id,
                     SpawnScene {
                         level: LevelInfo {
                             handle_id: "models/small/big.glb#Scene0".to_string(),
@@ -82,26 +83,28 @@ fn handle_connects(mut manager: ResMut<ServerPacketManager>, mut commands: Comma
     }
 }
 
-fn handle_leaves(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, players_query: Query<(Entity, &ServerPlayer)>) {
+fn handle_leaves(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, players_query: Query<(Entity, &ServerPlayer, &PlayerData)>) {
     let leave_packets = manager.received_all::<Disconnect, DisconnectPacketBuilder>(false).unwrap();
     let mut players_to_remove = HashSet::new();
 
-    for (addr, leaves) in leave_packets {
+    for (remote_id, leaves) in leave_packets {
         if let Some(leaves) = leaves {
             if !leaves.is_empty() {
-                info!("[server] Client with addr={} has disconnected", addr);
-                if let Err(e) = manager.close_connection(addr.clone()) {
-                    error!("[server] Could not close connection with addr={}.  Error: {}", addr, e);
+                let addr = manager.get_remote_address(remote_id);
+                info!("[server] Client {} with addr={:?} has disconnected", remote_id, addr);
+                if let Err(e) = manager.close_connection(remote_id) {
+                    error!("[server] Could not close connection with remote_id={}, addr={:?}.  Error: {}", remote_id, addr, e);
                 }
-                players_to_remove.insert(addr.clone());
+                players_to_remove.insert(remote_id);
             }
         }
     }
 
     // Remove disconnected players
-    for (entity, player) in &players_query {
-        if players_to_remove.contains(&player.addr) {
-            info!("[server] Removing player with addr={}", player.addr);
+    for (entity, player, player_data) in &players_query {
+        // also handle clients that did not gracefully disconnect
+        if players_to_remove.contains(&player_data.id) || manager.get_remote_address(player_data.id).is_none() {
+            info!("[server] Removing player with remote_id={}, addr={}", player_data.id, player.addr);
             commands.entity(entity).despawn_recursive();
         }
     }

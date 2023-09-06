@@ -60,15 +60,15 @@ fn movement(
     }
 }
 
-fn players_move(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, mut players: Query<(Entity, &ServerPlayer, &PlayerData)>) {
+fn players_move(mut manager: ResMut<ServerPacketManager>, mut commands: Commands, mut players: Query<(Entity, &PlayerData)>) {
     let move_packets = manager.received_all::<Movement, MovementPacketBuilder>(false).unwrap();
-    for (addr, move_packets) in move_packets {
+    for (remote_id, move_packets) in move_packets {
         if let Some(move_packet) = move_packets {
             let movement = move_packet.last().unwrap();
             // Find player
             let mut found = false;
-            for (entity, server_player, player_data) in players.iter_mut() {
-                if server_player.addr == addr && player_data.id == manager.get_client_id(&addr).unwrap() {
+            for (entity, player_data) in players.iter_mut() {
+                if player_data.id == remote_id {
                     found = true;
                     // TODO: path to spot in world?
                     let movement_vec = Vec2::new(movement.translation[0], movement.translation[1]).normalize() * 0.2;
@@ -77,7 +77,7 @@ fn players_move(mut manager: ResMut<ServerPacketManager>, mut commands: Commands
                 }
             }
             if !found {
-                error!("Received move packet from invalid player.  Packet from addr={}, id={}", addr, manager.get_client_id(&addr).unwrap());
+                error!("Received move packet from invalid player.  Packet from id={}", remote_id);
             }
         }
     }

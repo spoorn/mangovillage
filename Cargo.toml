@@ -50,7 +50,6 @@ opt-level = 3
 
 [profile.release]
 lto = "thin"
-opt-level = 1
 
 # Not available as mio does not support wasm: https://github.com/tokio-rs/tokio/issues/1597
 #[target.wasm32-unknown-unknown]

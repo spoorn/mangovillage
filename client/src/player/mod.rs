@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::render::view::NoFrustumCulling;
 use bevy::utils::HashMap;
 use bevy::window::PrimaryWindow;
 
@@ -47,12 +46,12 @@ fn update_players(
     asset_server: Res<AssetServer>,
     mut players_query: Query<(Entity, &PlayerData, &mut Transform)>,
     client_id: Res<ClientId>,
-    meshes: Query<(Entity, &Handle<Mesh>), Without<NoFrustumCulling>>,
+    //meshes: Query<(Entity, &Handle<Mesh>), Without<NoFrustumCulling>>,
 ) {
     // TODO: properly disable frustum culling for player meshes only due to bug https://github.com/bevyengine/bevy/issues/4294
-    for (entity, _mesh) in &meshes {
-        commands.entity(entity).insert(NoFrustumCulling);
-    }
+    // for (entity, _mesh) in &meshes {
+    //     commands.entity(entity).insert(NoFrustumCulling);
+    // }
     let server_player_packets = manager.received::<Players, PlayersPacketBuilder>(false).unwrap();
     if let Some(mut server_players) = server_player_packets {
         // Only care about last packet
